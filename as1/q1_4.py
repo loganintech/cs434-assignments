@@ -18,7 +18,7 @@ if len(args) < 2:
 ase_train_res = []
 ase_test_res = []
 
-range_arr = range(2, 2000, 2)
+range_arr = range(2, 21, 2)
 
 for d in range_arr:
     train_dist = standard_normal(d * tr_row).reshape(d, tr_row)
