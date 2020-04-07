@@ -18,7 +18,9 @@ if len(args) < 2:
 ase_train_res = []
 ase_test_res = []
 
-for d in range(2, 21, 2):
+range_arr = range(2, 2000, 2)
+
+for d in range_arr:
     train_dist = standard_normal(d * tr_row).reshape(d, tr_row)
     longer_training = np.insert(training, 0, train_dist, axis=1)
     test_dist = standard_normal(d * te_row).reshape(d, te_row)
@@ -32,7 +34,7 @@ for d in range(2, 21, 2):
 plt.ylabel("Mean Squared Error")
 plt.xlabel("Random Features 'D'")
 plt.title("Training vs Test Error over Random Features D")
-training, = plt.plot(range(2, 21, 2), ase_train_res, label="Training Data")
-testing, = plt.plot(range(2, 21, 2), ase_test_res, label="Testing Data")
+training, = plt.plot(range_arr, ase_train_res, label="Training Data")
+testing, = plt.plot(range_arr, ase_test_res, label="Testing Data")
 plt.legend(handles=[training, testing])
-plt.savefig("linreg_results.png")
+plt.savefig(f"linreg_results_{len(range_arr)*2}.png")

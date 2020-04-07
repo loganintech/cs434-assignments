@@ -25,10 +25,6 @@ def run_tests(training, testing, should_add_dummy=True):
     second_term = np.matmul(f_transposed, expected)
     # And multiply the terms together
     weight = np.matmul(inverted, second_term)
-    weight_transposed = np.transpose(weight.reshape(cols, 1))
-    # print(weight)
-
-    # print(f"Learned weight vector:\n{weight}\n")
 
     test_expected = testing[:, -1]
 
