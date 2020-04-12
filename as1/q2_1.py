@@ -5,33 +5,24 @@ import csv
 import matplotlib.pyplot as plt
 
 
-def loadCSV(fileName,nFeat):
-	xload = []
-	yload = []
-	temp = []
+def load_files(training, testing):
+    tr_feat = np.genfromtxt(training, usecols=range(256), delimiter=",")
+    tr_feat /= 255.0
+    tr_feat = np.insert(tr_feat, 0, 0, axis=1)
+    tr_exp = np.genfromtxt(training, usecols=range(-1), delimiter=",")
+    tr_exp = tr_exp[:, -1]
 
-	with open(fileName) as f:
-		string = f.read().replace('\n',',')
-		lines = string.split(',')									#lines = list of every data point
+    te_feat = np.genfromtxt(testing, usecols=range(256), delimiter=",")
+    te_feat /= 255.0
+    te_feat = np.insert(te_feat, 0, 0, axis=1)
+    te_exp = np.genfromtxt(testing, usecols=range(-1), delimiter=",")
+    te_exp = te_exp[:, -1]
 
-	lines = lines[:-1]
-
-	for count in range (0,len(lines)):
-		if (count+1) % (nFeat+1) == 0:							#if position is 14(y value) append to y
-			yload.append([float(lines[count])])
-		else:														#else (if first position append a dummy '1') append to temp
-			temp.append(float(lines[count]))
-    
-	xload = [temp[i:i+nFeat] for i in range(0,len(temp),nFeat)]		#splitting x into a list of lists separated by each instance
-	x1 = np.matrix(xload)											#converting x from list of lists to matrices
-	y1 = np.matrix(yload)											#converting y from list of lists to matrices
-	x1 = x1 * (1.0/255.0)       									#converts x values into percentages
-
-	return x1,y1
+    return tr_feat, tr_exp, te_feat, te_exp
 
 
 def calculate_y_hat(w, x):
-    exponent = (-1*np.dot(w, x.T))
+    exponent = (-1*np.dot(w.T, x))
     new_exponent = float(exponent.item(0))
     y_hat = 1./(1. + mth.exp(new_exponent))
     return y_hat
@@ -54,28 +45,26 @@ def check_accuracy(w, x, y):
     return percentage_correct
 
 
-def gradient():
-    #**************************************************************************
-    #LOGISTIC REGRESSION
-    #**************************************************************************
+def gradient(x, y, x1, y1):
+    # **************************************************************************
+    # LOGISTIC REGRESSION
+    # **************************************************************************
     training_accuracies = []
     testing_accuracies = []
 
-    x,y = loadCSV("usps_train.csv", 256)
-    x1, y1 = loadCSV("usps_test.csv", 256)
-    w = np.matrix([0] * 256)
+    w = np.zeros(x.shape[1])
 
-    learning_rate = 0.001 #let the learning rate be 0.001
-    iterations = 0 #number of times it has iterated through the while loop
+    learning_rate = 0.001  # let the learning rate be 0.001
+    iterations = 0  # number of times it has iterated through the while loop
 
     while True:
-        gradient = np.matrix([0] * 256)
-        for i in range(1,x.shape[0]):
+        gradient = np.zeros(x.shape[1])
+        for i in range(1, x.shape[0]):
             y_hat = calculate_y_hat(w, x[i])
             a = y_hat - y[i].item(0)
             b = a*x[i]
             gradient = np.add(gradient, b)
-        
+
         result = learning_rate * gradient
         w = np.subtract(w, result)
 
@@ -88,19 +77,21 @@ def gradient():
     return training_accuracies, testing_accuracies
 
 
-
 args = sys.argv[1:]
-if len(args) < 3:
+if len(args) < 2:
     print("You must include a training and testing dataset, as well as a learning rate", file=sys.stderr)
-    print("Like so: python3 linear_regression.py housing_train.csv housing_test.csv")
+    print("Like so: python3 q2_1.py usps_train.csv usps_test.csv")
     exit(1)
 
 iterations = []
 
-for i in range(0,100):
+for i in range(0, 100):
     iterations.append(i+1)
 
-training_accuracies, testing_accuracies = gradient()
+training_features, training_expected, test_features, test_expected = load_files(
+    args[0], args[1])
+training_accuracies, testing_accuracies = gradient(
+    training_features, training_expected, test_features, test_expected)
 plt.ylabel("Accuracy")
 plt.xlabel("Iteration")
 plt.title("Accuracy as  Function of Iteration")
