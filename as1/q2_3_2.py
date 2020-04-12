@@ -1,21 +1,29 @@
 import sys
 import numpy as np
 import math
-from mpmath import mp
-import csv
 import matplotlib.pyplot as plt
+import random
 
 
 def load_files(training, testing):
     tr_feat = np.genfromtxt(training, usecols=range(256), delimiter=",")
     tr_feat /= 255.0
-    tr_feat = np.insert(tr_feat, 0, 1, axis=1)
+    tr_feat = np.insert(tr_feat, 0, 0, axis=1)
     tr_exp = np.genfromtxt(training, usecols=range(-1), delimiter=",")
+    tr_exp = tr_exp[:, -1]
 
     te_feat = np.genfromtxt(testing, usecols=range(256), delimiter=",")
     te_feat /= 255.0
-    te_feat = np.insert(te_feat, 0, 1, axis=1)
+    te_feat = np.insert(te_feat, 0, 0, axis=1)
     te_exp = np.genfromtxt(testing, usecols=range(-1), delimiter=",")
+    te_exp = te_exp[:, -1]
+
+    # for i in tr_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
+    # for i in te_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
 
     return tr_feat, tr_exp, te_feat, te_exp
 
@@ -25,27 +33,33 @@ def sigmoid(weight, case):
     exponent = -1.0 * np.dot(weight.T, case)
 
     try:
-        prediction = 1.0 / (1.0 + np.exp(exponent))
+        prediction = 1.0 / (1.0 + math.exp(exponent))
     except Exception as e:
-        print(f"Exponent: {exponent}")
-        print(f"Exponent Item: {exponent.item(0)}")
-        prediction = 1.0 / (1.0 + mp.exp(exponent.item(0)))
+        print(
+            f"An exception occurred trying to exponentiate a large value: {exponent}")
+        print(weight.T)
+        print(case)
+        print(np.dot(weight.T, case))
+        raise e
+        # return 1
+
     return prediction
 
 
 def check_accuracy(w, x, y):
     correct = 0
-    for (case, expected) in zip(x, y):
-        if expected[0] == 1.0 and np.dot(w.T, case) >= 0.0:
+
+    for i in range(x.shape[0]):
+        if np.dot(w.T, x[i]) >= 0.0 and y[i] == 1:
             correct += 1
-        elif expected[0] == 0.0 and 1 - np.dot(w.T, case) < 0.0:
+        elif np.dot(w.T, x[i]) < 0.0 and y[i] == 0:
             correct += 1
 
     percentage_correct = correct / x.shape[0]
     return percentage_correct
 
 
-def gradient(training_data, training_expected, testing_data, testing_expected, reg_strength=None, iterations=250):
+def gradient(training_data, training_expected, testing_data, testing_expected, reg_strength=None, iterations=100):
     training_accuracies = []
     testing_accuracies = []
 
@@ -57,19 +71,19 @@ def gradient(training_data, training_expected, testing_data, testing_expected, r
 
     w = np.zeros(training_data.shape[1])  # Feature count
 
-    learning_rate = 0.000005  # let the learning rate be very small
+    learning_rate = 0.00005  # let the learning rate be very small
 
     for _ in range(iterations):
         gradient_batch = np.zeros(training_data.shape[1])  # Feature count
-        for i in range(training_data.shape[0]): # Example count
+        for i in range(training_data.shape[0]):  # Example count
             predicted = sigmoid(w, training_data[i])
             diff = (predicted - training_expected[i]) * training_data[i]
             gradient_batch = np.add(gradient_batch, diff)
 
         if reg_strength is not None:
-            normalized = np.linalg.norm(w) ** 2
+            normalized = np.linalg.norm(w)
             gradient_batch = np.add(
-                gradient_batch, normalized * 0.5 * reg_strength)
+                gradient_batch, normalized * reg_strength)
 
         gradient_batch = learning_rate * gradient_batch
         w = np.subtract(w, gradient_batch)
