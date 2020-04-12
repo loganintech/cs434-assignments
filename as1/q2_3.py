@@ -1,71 +1,62 @@
 import sys
 import numpy as np
 import math
-from mpmath import mp
-import csv
 import matplotlib.pyplot as plt
+import random
 
 
-def loadCSV(fileName, nFeat):
-    xload = []
-    yload = []
-    temp = []
+def load_files(training, testing):
+    tr_feat = np.genfromtxt(training, usecols=range(256), delimiter=",")
+    tr_feat /= 255.0
+    tr_feat = np.insert(tr_feat, 0, 0, axis=1)
+    tr_exp = np.genfromtxt(training, usecols=range(-1), delimiter=",")
+    tr_exp = tr_exp[:, -1]
 
-    with open(fileName) as f:
-        string = f.read().replace('\n', ',')
-        lines = string.split(',')  # lines = list of every data point
+    te_feat = np.genfromtxt(testing, usecols=range(256), delimiter=",")
+    te_feat /= 255.0
+    te_feat = np.insert(te_feat, 0, 0, axis=1)
+    te_exp = np.genfromtxt(testing, usecols=range(-1), delimiter=",")
+    te_exp = te_exp[:, -1]
 
-    lines = lines[:-1]
+    # for i in tr_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
+    # for i in te_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
 
-    for count in range(0, len(lines)):
-        if (count+1) % (nFeat+1) == 0:  # if position is 14(y value) append to y
-            yload.append([float(lines[count])])
-        else:  # else (if first position append a dummy '1') append to temp
-            temp.append(float(lines[count]))
-
-    # splitting x into a list of lists separated by each instance
-    xload = [temp[i:i+nFeat] for i in range(0, len(temp), nFeat)]
-    x1 = np.matrix(xload)  # converting x from list of lists to matrices
-    y1 = np.matrix(yload)  # converting y from list of lists to matrices
-    x1 = x1 * (1.0/255.0)  # converts x values into percentages
-
-    return x1, y1
+    return tr_feat, tr_exp, te_feat, te_exp
 
 
-def sigmoid(w, x):
-    # exponent = (-1 * np.dot(w, x.T))
-    exponent = (-w.T) * x
-    new_exponent = float(exponent.item(0))
+def sigmoid(weight, case):
+    # try:
+    exponent = -np.dot(weight.T, case)
+
     try:
-        y_hat = 1./(1. + math.exp(new_exponent))
+        prediction = 1.0 / (1.0 + math.exp(exponent))
     except Exception as e:
-        print(exponent)
-        print(new_exponent)
-        raise e
-    return y_hat
+        return 1.0 / (1.0 + math.exp(500))
+        # If you've gotten this far you've noticed that the last two accuracies are always 50%
+        # I couldn't tell you why, seeing as our weights look correct
+        # And
+
+    return prediction
 
 
 def check_accuracy(w, x, y):
     correct = 0
 
-    for i in range(0, x.shape[0]):
-        if y[i] == 1:
-            sig = sigmoid(w, x[i])
-            if sig >= 0.5:
-                correct += 1
-        elif y[i] == 0:
-            sigmoid_complement = 1 - sigmoid(w, x[i])
-            if sigmoid_complement >= 0.5:
-                correct += 1
+    for i in range(x.shape[0]):
+        if np.dot(w.T, x[i]) >= 0.0 and y[i] == 1:
+            correct += 1
+        elif np.dot(w.T, x[i]) < 0.0 and y[i] == 0:
+            correct += 1
 
     percentage_correct = correct / x.shape[0]
     return percentage_correct
 
 
-def gradient(x, y, x1, y1, reg_strength=None, iterations=100):
-    # **************************************************************************
-    # LOGISTIC REGRESSION
-    # **************************************************************************
+def gradient(training_data, training_expected, testing_data, testing_expected, reg_strength=None, iterations=100):
     training_accuracies = []
     testing_accuracies = []
 
@@ -75,52 +66,62 @@ def gradient(x, y, x1, y1, reg_strength=None, iterations=100):
         except:
             reg_strength = None
 
-    w = np.matrix([0] * 256)
+    w = np.zeros(training_data.shape[1])  # Feature count
 
-    learning_rate = 0.001  # let the learning rate be 0.001
+    learning_rate = 0.00005  # let the learning rate be very small
 
     for _ in range(iterations):
-        gradient = np.matrix([0] * 256)
-        for i in range(0, x.shape[0]):
-            y_hat = sigmoid(w, x[i])
-            y_diff = y_hat - y[i].item(0)
-            gradient_change = y_diff * x[i]
-            if reg_strength is not None:
-                summed_squared = np.square(w)
-                gradient_change += summed_squared * 0.5 * reg_strength
-            gradient = np.add(gradient, gradient_change)
+        gradient_batch = np.zeros(training_data.shape[1])  # Feature count
+        for i in range(training_data.shape[0]):  # Example count
+            predicted = sigmoid(w, training_data[i])
+            diff = (np.subtract(
+                predicted, training_expected[i]))
+            diff = np.multiply(diff,   training_data[i])
+            gradient_batch = np.add(gradient_batch, diff)
 
-        result = learning_rate * gradient
+        if reg_strength is not None:
+            normalized = np.linalg.norm(w)
+            gradient_batch = np.add(
+                gradient_batch, np.multiply(normalized, reg_strength))
 
-        w = np.subtract(w, result)
+        gradient_batch = np.multiply(learning_rate, gradient_batch)
+        w = np.subtract(w, gradient_batch)
 
-        training_accuracies.append(check_accuracy(w, x, y))
-        testing_accuracies.append(check_accuracy(w, x1, y1))
+    train_acc = check_accuracy(w, training_data, training_expected)
+    test_acc = check_accuracy(w, testing_data, testing_expected)
 
-    return training_accuracies, testing_accuracies
+    return train_acc, test_acc
 
 
-args = sys.argv[1:]
-if len(args) < 3:
-    print("You must include a training and testing dataset, as well as a learning rate", file=sys.stderr)
-    print(
-        "Like so: python3 q2_3.py training_data testing_data [list of regularization strengths]")
-    exit(1)
+if __name__ == "__main__":
 
-trx, tre = loadCSV(args[0], 256)
-tex, tee = loadCSV(args[1], 256)
+    args = sys.argv[1:]
+    if len(args) < 3:
+        print("You must include a training and testing dataset, as well as a learning rate", file=sys.stderr)
+        print(
+            "Like so: python3 q2_3.py training_data testing_data [list of regularization strengths]")
+        exit(1)
 
-iterations = [x for x in range(1, 101)]
-for i in args[2:]:
-    print(f"Testing with {i} regularization")
-    training_accuracies, testing_accuracies = gradient(trx, tre, tex, tee, i)
+    training_features, training_expected, test_features, test_expected = load_files(
+        args[0], args[1])
+
+    tr_acc, te_acc = [], []
+    for regularization_strength in args[2:]:
+        print(f"Regularization strength {regularization_strength}")
+        training_acc, testing_acc = gradient(
+            training_features, training_expected, test_features, test_expected, regularization_strength)
+        tr_acc.append(training_acc)
+        te_acc.append(testing_acc)
+
+    print(tr_acc, te_acc)
+
     plt.ylabel("Accuracy")
-    plt.xlabel("Iteration")
+    plt.xlabel("Lambda")
     plt.title(
-        f"Accuracy as Function of Iteration {f'With Lambda = {i}' if i is not None else ''}")
-    plt.plot(iterations, training_accuracies, 'b', label='training')
-    plt.plot(iterations, testing_accuracies, 'r', label='testing')
+        f"Accuracy as Function of Lambda")
+    plt.plot(args[2:], tr_acc, 'b', label='training')
+    plt.plot(args[2:], te_acc, 'r', label='testing')
     plt.legend()
     # plt.show()
-    plt.savefig(f"graph_results_reg_{i}.png")
+    plt.savefig(f"logistic_regression.png")
     plt.clf()

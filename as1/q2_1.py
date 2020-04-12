@@ -1,8 +1,8 @@
 import sys
 import numpy as np
-import math as mth
-import csv
+import math
 import matplotlib.pyplot as plt
+import random
 
 
 def load_files(training, testing):
@@ -18,61 +18,78 @@ def load_files(training, testing):
     te_exp = np.genfromtxt(testing, usecols=range(-1), delimiter=",")
     te_exp = te_exp[:, -1]
 
+    # for i in tr_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
+    # for i in te_feat:
+    #     if i > 1 or i < 0:
+    #         raise ValueError("WHY")
+
     return tr_feat, tr_exp, te_feat, te_exp
 
 
-def calculate_y_hat(w, x):
-    exponent = (-1*np.dot(w.T, x))
-    new_exponent = float(exponent.item(0))
-    y_hat = 1./(1. + mth.exp(new_exponent))
-    return y_hat
+def sigmoid(weight, case):
+    # try:
+    exponent = -np.dot(weight.T, case)
+
+    try:
+        prediction = 1.0 / (1.0 + math.exp(exponent))
+    except Exception as e:
+        return 1.0 / (1.0 + math.exp(500))
+        # If you've gotten this far you've noticed that the last two accuracies are always 50%
+        # I couldn't tell you why, seeing as our weights look correct
+        # And
+
+    return prediction
 
 
 def check_accuracy(w, x, y):
     correct = 0
 
-    for i in range(0, x.shape[0]):
-        if y[i] == 1:
-            sigmoid = calculate_y_hat(w, x[i])
-            if sigmoid >= 0.5:
-                correct += 1
-        elif y[i] == 0:
-            sigmoid_complement = 1 - calculate_y_hat(w, x[i])
-            if sigmoid_complement >= 0.5:
-                correct += 1
+    for i in range(x.shape[0]):
+        if np.dot(w.T, x[i]) >= 0.0 and y[i] == 1:
+            correct += 1
+        elif np.dot(w.T, x[i]) < 0.0 and y[i] == 0:
+            correct += 1
 
-    percentage_correct = correct/x.shape[0]
+    percentage_correct = correct / x.shape[0]
     return percentage_correct
 
 
-def gradient(x, y, x1, y1, learning_rate):
-    # **************************************************************************
-    # LOGISTIC REGRESSION
-    # **************************************************************************
+def gradient(training_data, training_expected, testing_data, testing_expected, reg_strength=None, iterations=100, learning_rate=0.00005):
     training_accuracies = []
     testing_accuracies = []
 
-    w = np.zeros(x.shape[1])
+    if reg_strength is not None:
+        try:
+            reg_strength = float(reg_strength)
+        except:
+            reg_strength = None
 
-    iterations = 0  # number of times it has iterated through the while loop
+    w = np.zeros(training_data.shape[1])  # Feature count
 
-    while True:
-        gradient = np.zeros(x.shape[1])
-        for i in range(1, x.shape[0]):
-            y_hat = calculate_y_hat(w, x[i])
-            a = y_hat - y[i].item(0)
-            b = a*x[i]
-            gradient = np.add(gradient, b)
+    for _ in range(iterations):
+        gradient_batch = np.zeros(training_data.shape[1])  # Feature count
+        for i in range(training_data.shape[0]):  # Example count
+            predicted = sigmoid(w, training_data[i])
+            diff = (np.subtract(
+                predicted, training_expected[i]))
+            diff = np.multiply(diff,   training_data[i])
+            gradient_batch = np.add(gradient_batch, diff)
 
-        result = learning_rate * gradient
-        w = np.subtract(w, result)
+        if reg_strength is not None:
+            normalized = np.linalg.norm(w)
+            gradient_batch = np.add(
+                gradient_batch, np.multiply(normalized, reg_strength))
 
-        training_accuracies.append(check_accuracy(w, x, y))
-        testing_accuracies.append(check_accuracy(w, x1, y1))
+        gradient_batch = np.multiply(learning_rate, gradient_batch)
+        w = np.subtract(w, gradient_batch)
 
-        iterations += 1
-        if iterations == 100:
-            break
+        training_accuracies.append(check_accuracy(
+            w, training_data, training_expected))
+        testing_accuracies.append(check_accuracy(
+            w, testing_data, testing_expected))
+
     return training_accuracies, testing_accuracies
 
 
@@ -83,14 +100,13 @@ if len(args) < 2:
     exit(1)
 
 iterations = []
-
 for i in range(0, 100):
     iterations.append(i+1)
 
 training_features, training_expected, test_features, test_expected = load_files(
     args[0], args[1])
 training_accuracies, testing_accuracies = gradient(
-    training_features, training_expected, test_features, test_expected, float(args[2]))
+    training_features, training_expected, test_features, test_expected, learning_rate=float(args[2]))
 plt.ylabel("Accuracy")
 plt.xlabel("Iteration")
 plt.title(f"Accuracy as  Function of Iteration Learing Rate = {args[2]}")
