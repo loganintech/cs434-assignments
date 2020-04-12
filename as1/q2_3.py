@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import math
+from mpmath import mp
 import csv
 import matplotlib.pyplot as plt
 
@@ -32,9 +33,15 @@ def loadCSV(fileName, nFeat):
 
 
 def sigmoid(w, x):
-    exponent = (-1*np.dot(w, x.T))
+    # exponent = (-1 * np.dot(w, x.T))
+    exponent = (-w.T) * x
     new_exponent = float(exponent.item(0))
-    y_hat = 1./(1. + math.exp(new_exponent))
+    try:
+        y_hat = 1./(1. + math.exp(new_exponent))
+    except Exception as e:
+        print(exponent)
+        print(new_exponent)
+        raise e
     return y_hat
 
 
@@ -47,15 +54,11 @@ def check_accuracy(w, x, y):
             if sig >= 0.5:
                 correct += 1
         elif y[i] == 0:
-            try:
-                sigmoid_complement = 1 - sigmoid(w, x[i])
-            except Exception as e:
-                print(x[i])
-                raise e
+            sigmoid_complement = 1 - sigmoid(w, x[i])
             if sigmoid_complement >= 0.5:
                 correct += 1
 
-    percentage_correct = correct/x.shape[0]
+    percentage_correct = correct / x.shape[0]
     return percentage_correct
 
 
@@ -82,11 +85,12 @@ def gradient(x, y, x1, y1, reg_strength=None, iterations=100):
             y_hat = sigmoid(w, x[i])
             y_diff = y_hat - y[i].item(0)
             gradient_change = y_diff * x[i]
+            if reg_strength is not None:
+                summed_squared = np.square(w)
+                gradient_change += summed_squared * 0.5 * reg_strength
             gradient = np.add(gradient, gradient_change)
 
         result = learning_rate * gradient
-        if reg_strength is not None:
-            result = learning_rate * (gradient + (float(reg_strength) * w))
 
         w = np.subtract(w, result)
 
