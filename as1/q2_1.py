@@ -45,7 +45,7 @@ def check_accuracy(w, x, y):
     return percentage_correct
 
 
-def gradient(x, y, x1, y1):
+def gradient(x, y, x1, y1, learning_rate):
     # **************************************************************************
     # LOGISTIC REGRESSION
     # **************************************************************************
@@ -54,7 +54,6 @@ def gradient(x, y, x1, y1):
 
     w = np.zeros(x.shape[1])
 
-    learning_rate = 0.001  # let the learning rate be 0.001
     iterations = 0  # number of times it has iterated through the while loop
 
     while True:
@@ -80,7 +79,7 @@ def gradient(x, y, x1, y1):
 args = sys.argv[1:]
 if len(args) < 2:
     print("You must include a training and testing dataset, as well as a learning rate", file=sys.stderr)
-    print("Like so: python3 q2_1.py usps_train.csv usps_test.csv")
+    print("Like so: python3 q2_1.py usps_train.csv usps_test.csv learning_rate")
     exit(1)
 
 iterations = []
@@ -91,10 +90,10 @@ for i in range(0, 100):
 training_features, training_expected, test_features, test_expected = load_files(
     args[0], args[1])
 training_accuracies, testing_accuracies = gradient(
-    training_features, training_expected, test_features, test_expected)
+    training_features, training_expected, test_features, test_expected, float(args[2]))
 plt.ylabel("Accuracy")
 plt.xlabel("Iteration")
-plt.title("Accuracy as  Function of Iteration")
+plt.title(f"Accuracy as  Function of Iteration Learing Rate = {args[2]}")
 plt.plot(iterations, training_accuracies, 'b', label='training')
 plt.plot(iterations, testing_accuracies, 'r', label='testing')
 plt.legend()
