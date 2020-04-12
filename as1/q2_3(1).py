@@ -53,8 +53,12 @@ def check_accuracy(w, x, y):
     percentage_correct = correct/x.shape[0]
     return percentage_correct
 
-
+#********************************************************************
+#NEED TO FIX
+#********************************************************************
 def calculate_l(w, x, y):
+    #Calculate the loss for the ith example using for loop from range (0, x.shape[0])
+    #Then calculate the total and return that
     l = 0
     term1 = 0
     term2 = 0
@@ -130,7 +134,7 @@ l = []
 
 for i in range(0, 6):
     x, y, w = gradient(reg_strength[i])
-    l.append(calculate_l(w, x[i], y[i].item(0)))
+    l.append(calculate_l(w, x, y)
 
 print(l)
 
