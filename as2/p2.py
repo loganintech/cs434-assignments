@@ -17,7 +17,7 @@ Given a set of N training reviews, MLE of the parameters are:
 '''
 def learn_classes():
     #learn P(y=1):
-    with open('data\IMDB_labels.csv', newline='') as f:
+    with open('IMDB_labels.csv', newline='') as f:
         reader = csv.reader(f)
         data = list(reader)
 
@@ -35,8 +35,8 @@ def learn_classes():
     #learn P(y=0):
     count2 = 30000 - count
     prob0 = count2/30000
-    print(prob0)
 
+    print(prob0)
 
 #Function calls
 learn_classes()

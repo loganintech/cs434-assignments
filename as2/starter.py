@@ -3,7 +3,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 import re
 
 # Importing the dataset
-imdb_data = pd.read_csv('data\IMDB.csv', delimiter=',')
+imdb_data = pd.read_csv('IMDB.csv', delimiter=',')
 
 
 def clean_text(text):
@@ -42,6 +42,6 @@ vectorizer.fit(imdb_data['review'])
 # get the vocabulary
 inv_vocab = {v: k for k, v in vectorizer.vocabulary_.items()}
 vocabulary = [inv_vocab[i] for i in range(len(inv_vocab))]
-#print(vocabulary)
+print(vocabulary)
 
 
