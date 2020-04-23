@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 import re
+import csv
 
 
 def clean_text(text):
@@ -28,7 +29,7 @@ def clean_text(text):
 
 
 # Importing the dataset
-training_data = pd.read_csv('data/IMDB.csv', delimiter=',', nrows=30001)
+training_data = pd.read_csv('data/IMDB.csv', delimiter=',', nrows=30000)
 # this vectorizer will skip stop words
 vectorizer = CountVectorizer(
     stop_words="english",
@@ -68,5 +69,36 @@ def get_lang_vector_from_dataframe(frame):
     return vectors
 
 
+training_vectors = get_lang_vector_from_dataframe(training_data)
 validation_vectors = get_lang_vector_from_dataframe(validation_data)
 test_vectors = get_lang_vector_from_dataframe(test_data)
+
+#print(training_vectors)
+#print(len(training_vectors))
+#print(len(training_vectors[0]))
+#print(len(vocabulary))
+
+with open('data/IMDB_labels.csv', newline='') as f:
+    reader = csv.reader(f)
+    data = list(reader)
+
+data.pop(0)
+print(data[0])
+
+
+word_probabilities = []
+count = 0
+overall_count = 0
+
+
+for k in range(0, len(vocabulary)):
+    for i in range(0, 30000):
+        if data[i] == ['positive']:
+            overall_count += 1
+            for j in range(0, len(vocabulary)):
+                if training_vectors[i][j] == vocabulary[k]:
+                    count += 1
+    probability = (count + 1) / ((overall_count * len(vocabulary)) + (len(vocabulary) * 1))
+    word_probabilities.append(probability)
+    count = 0
+    overall_count = 0
