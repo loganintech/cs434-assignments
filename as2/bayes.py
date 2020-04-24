@@ -130,7 +130,7 @@ def train_model(is_positive=True, alpha=1):
     for i in range(len(probs)):
         probs[i] += alpha
         probs[i] /= total_word_count + (len(vocabulary) * alpha)
-        probs[i] = math.log(probs[i], 10)
+        probs[i] = math.log(probs[i])
 
     return probs
 
