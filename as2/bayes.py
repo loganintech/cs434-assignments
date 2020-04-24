@@ -1,4 +1,3 @@
-import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 import re
 import csv
@@ -29,31 +28,6 @@ def clean_text(text):
     return text
 
 
-def learn_classes():
-    # learn P(y=1):
-    with open('data/IMDB_labels.csv', newline='') as f:
-        reader = csv.reader(f)
-        data = list(reader)
-    data.pop(0)
-
-    positive_count = 0
-    for i in range(0, 30000):
-        if data[i] == ['positive']:
-            positive_count += 1
-
-    pos_prob = positive_count/30000
-
-    # learn P(y=0):
-    negative_count = 30000 - positive_count
-    neg_prob = negative_count/30000
-
-    return pos_prob, neg_prob
-
-
-# Importing the dataset
-training_data = pd.read_csv('data/IMDB.csv', delimiter=',', nrows=30000)
-
-
 # this vectorizer will skip stop words
 vectorizer = CountVectorizer(
     stop_words="english",
@@ -61,9 +35,50 @@ vectorizer = CountVectorizer(
     max_features=2000,
 )
 
+with open('./data/IMDB.csv', "r", encoding="utf-8") as f:
+
+    lines = f.readlines()
+    without_header = list(map(lambda line: line.split(",")[0], lines[1:]))
+    training_data = without_header[:30000]
+    validation_data = without_header[30000:40000]
+    test_data = without_header[40000:]
+    assert len(training_data) == 30000
+    assert len(validation_data) == 10000
+    assert len(test_data) == 10000
+
+with open('data/IMDB_labels.csv', "r", encoding='utf-8') as f:
+    lines = f.readlines()
+    lines = list(map(lambda line: line.split(",")
+                     [0] == "positive\n", lines[1:]))
+    training_labels = lines[:30000]
+    validation_labels = lines[30000:]
+    assert len(training_labels) == 30000
+    assert len(validation_labels) == 10000
+
+
+def learn_classes():
+
+    # Track our positive count
+    positive_count = 0
+    # for all the training data
+    for label in training_labels:
+        # if the label is positive, add one to our count
+        if label:
+            positive_count += 1
+
+    # Pos prob is total number of pos over total count of items
+    pos_prob = positive_count/30000
+
+    # learn P(y=0):
+    negative_count = 30000 - positive_count
+    # neg prob is negative count / total count
+    neg_prob = negative_count/30000
+
+    return pos_prob, neg_prob
+
 
 # fit the vectorizer on the text
-counts = vectorizer.fit_transform(training_data['review'])
+counts = vectorizer.fit(training_data)
 
 # # get the vocabulary
 vocab_dict = {k: v for k, v in vectorizer.vocabulary_.items()}
@@ -71,18 +86,11 @@ count_vocab_dict = {v: k for k, v in vectorizer.vocabulary_.items()}
 vocabulary = [count_vocab_dict[i] for i in range(len(count_vocab_dict))]
 
 
-validation_data = pd.read_csv(
-    'data/IMDB.csv', delimiter=',', nrows=10000, skiprows=30000 + 1)
-
-test_data = pd.read_csv(
-    'data/IMDB.csv', delimiter=',', nrows=20000, skiprows=40000 + 1)
-
-
-def get_lang_vector_from_dataframe(frame):
+def get_vectors_from_data(frame):
     vectors = []
-    for line in frame.iloc[:, 0]:
+    for line in frame:
         line = clean_text(line).split()
-        vec = [0 for _ in range(2000)]
+        vec = [0] * len(vocabulary)
         for word in line:
             try:
                 vec[vocab_dict[word]] += 1
@@ -93,27 +101,19 @@ def get_lang_vector_from_dataframe(frame):
     return vectors
 
 
-training_vectors = get_lang_vector_from_dataframe(training_data)
-validation_vectors = get_lang_vector_from_dataframe(validation_data)
-test_vectors = get_lang_vector_from_dataframe(test_data)
-
-# print(training_vectors)
-# print(len(training_vectors))
-# print(len(training_vectors[0]))
-# print(len(vocabulary))
-
-with open('data/IMDB_labels.csv', newline='') as f:
-    reader = csv.reader(f)
-    data = list(reader)
-
-data.pop(0)
+training_vectors = get_vectors_from_data(training_data)
+assert len(training_vectors) == 30000
+validation_vectors = get_vectors_from_data(validation_data)
+assert len(validation_vectors) == 10000
+test_vectors = get_vectors_from_data(test_data)
+assert len(test_vectors) == 10000
 
 
 def train_probability(is_positive=True, alpha=1):
     total_word_count = 0
     probs = [0] * len(vocabulary)  # [0, 0, 0, ...]
     for rev_idx, review in enumerate(training_vectors):  # Loop over the reviews
-        if (data[rev_idx] == ['positive'] and not is_positive) or (data[rev_idx] == ['negative'] and is_positive):
+        if (training_labels[rev_idx] and not is_positive) or (not training_labels[rev_idx] and is_positive):
             continue
 
         # review[i] == number of word off vocabulary[i] in the review
@@ -139,30 +139,54 @@ total_pos_prob, total_neg_prob = learn_classes()
 
 # print(pos_probs)
 # print(neg_probs)
-# print(total_pos_prob)  # p(y==1)
-# print(total_neg_prob)  # p(y==0)
+print(total_pos_prob)  # p(y==1)
+print(total_neg_prob)  # p(y==0)
 
-correct = 0
-total = len(validation_vectors)
-# For every review
-for valid_idx, review in enumerate(validation_vectors):
-    pos_prob = 1.0
-    neg_prob = 1.0
-    # For every vocab word in the review
-    for i, count_of_ith_vocab_word_in_review in enumerate(review):
-        if count_of_ith_vocab_word_in_review == 0:
-            continue
-        pos_prob *= pos_probs[i] * count_of_ith_vocab_word_in_review
-        neg_prob *= neg_probs[i] * count_of_ith_vocab_word_in_review
 
-    pos_prob /= total_pos_prob * 30000
-    neg_prob /= total_neg_prob * 30000
+def apply_model(x, is_positive=True):
+    negative_term = 1
+    positive_term = 1
 
-    is_pos = pos_prob > neg_prob
+    for i in range(len(vocabulary)):
+        negative_term *= (neg_probs[i] ** x[i])
+        positive_term *= (pos_probs[i] ** x[i])
 
-    if is_pos and data[valid_idx + 30000][0] == 'positive':
-        correct += 1
-    elif not is_pos and data[valid_idx + 30000][0] == 'negative':
-        correct += 1
+    if not is_positive:
+        numerator = negative_term * total_neg_prob
+    else:
+        numerator = positive_term * total_pos_prob
 
-print(correct / total)
+    denominator = (negative_term * total_neg_prob) + \
+        (positive_term * total_pos_prob)
+    return numerator / denominator
+
+def count_labels(labels):
+    pos = 0
+    for label in labels:
+        if label:
+            pos += 1
+    neg = len(labels) - pos
+    return pos, neg
+
+def validate(vec, labels):
+    pos, neg = count_labels(labels)
+    pos_corr = 0
+    neg_corr = 0
+    correct = 0
+    for i, (x, posval) in enumerate(zip(vec, labels)):
+        neg_prob = apply_model(x, is_positive=False)
+        pos_prob = apply_model(x, is_positive=True)
+        if pos_prob > neg_prob and posval:
+            pos_corr += 1
+            correct += 1
+        elif pos_prob <= neg_prob and not posval:
+            neg_corr += 1
+            correct += 1
+
+    print("Total cor", correct / len(vec))
+    print("Pos cor", pos_corr / pos)
+    print("Neg cor", neg_corr / neg)
+
+
+validate(training_vectors, training_labels)
+validate(validation_vectors, validation_labels)
