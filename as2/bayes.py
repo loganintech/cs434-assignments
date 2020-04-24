@@ -32,7 +32,7 @@ def clean_text(text):
 vectorizer = CountVectorizer(
     stop_words="english",
     preprocessor=clean_text,
-    max_features=2000,
+    max_features=4000,
 )
 
 with open('./data/IMDB.csv', "r", encoding="utf-8") as f:
@@ -86,6 +86,8 @@ vocab_dict = {k: v for k, v in vectorizer.vocabulary_.items()}
 count_vocab_dict = {v: k for k, v in vectorizer.vocabulary_.items()}
 vocabulary = [count_vocab_dict[i] for i in range(len(count_vocab_dict))]
 
+print(len(vocabulary))
+
 
 def get_vectors_from_data(frame):
     vectors = []
@@ -123,69 +125,62 @@ def train_model(is_positive=True, alpha=1):
         # IE, if vocabulary[i] == "cheese" then review[i] is number of times "cheese" is in the review
         # Loop over the count of the i'th vocab word in said review
         for i, count_of_ith_vocab_word_in_review in enumerate(review):
-            if count_of_ith_vocab_word_in_review > 0:
-                probs[i] += count_of_ith_vocab_word_in_review
-                total_word_count += count_of_ith_vocab_word_in_review
+            probs[i] += count_of_ith_vocab_word_in_review
+            total_word_count += count_of_ith_vocab_word_in_review
 
     for i in range(len(probs)):
         probs[i] += alpha
         probs[i] /= total_word_count + (len(vocabulary) * alpha)
-        probs[i] = math.log(probs[i])
+        if probs[i] != 0:
+            probs[i] = math.log(probs[i])
 
     return probs
 
 
-alpha = 1
-pos_probs = train_model(is_positive=True,  alpha=alpha)
-neg_probs = train_model(is_positive=False, alpha=alpha)
-total_pos_prob, total_neg_prob, _, _ = learn_classes(training_labels)
 
-# print(pos_probs)
-# print(neg_probs)
-# print(total_pos_prob)  # p(y==1)
-# print(total_neg_prob)  # p(y==0)
+def run_model_with_alpha(alpha):
+    pos_probs = train_model(is_positive=True,  alpha=alpha)
+    neg_probs = train_model(is_positive=False, alpha=alpha)
+    total_pos_prob, total_neg_prob, _, _ = learn_classes(training_labels)
 
+    def apply_model(x, is_positive=True):
+        positive_term = 0
+        negative_term = 0
 
-def apply_model(x, is_positive=True):
-    negative_term = 1
-    positive_term = 1
+        for i in range(len(vocabulary)):
+            positive_term += pos_probs[i] * x[i]
+            negative_term += neg_probs[i] * x[i]
 
-    for i in range(len(vocabulary)):
-        negative_term *= (neg_probs[i] ** x[i])
-        positive_term *= (pos_probs[i] ** x[i])
+        if is_positive:
+            return positive_term + math.log(total_pos_prob)
+        else:
+            return negative_term + math.log(total_neg_prob)
 
-    if is_positive:
-        numerator = positive_term * total_pos_prob
-    else:
-        numerator = negative_term * total_neg_prob
+    def validate(vec, labels):
+        _, _, pos, neg = learn_classes(labels)
+        pos_corr = 0
+        neg_corr = 0
+        correct = 0
+        for i, (x, posval) in enumerate(zip(vec, labels)):
+            pos_prob = apply_model(x, is_positive=True)
+            neg_prob = apply_model(x, is_positive=False)
+            # print(pos_prob, neg_prob, pos_prob > neg_prob, posval)
+            if pos_prob > neg_prob and posval:
+                pos_corr += 1
+                correct += 1
+            elif pos_prob < neg_prob and not posval:
+                neg_corr += 1
+                correct += 1
 
-    denominator = (negative_term * total_neg_prob) + \
-        (positive_term * total_pos_prob)
-    return numerator / denominator
+        print("Total cor", correct / len(vec))
+        print("Pos cor", pos_corr / pos)
+        print("Neg cor", neg_corr / neg)
 
+    # print("Validating training vectors")
+    # validate(training_vectors, training_labels)
+    print("Validating validation vectors")
+    validate(validation_vectors, validation_labels)
 
-def validate(vec, labels):
-    _, _, pos, neg = learn_classes(labels)
-    pos_corr = 0
-    neg_corr = 0
-    correct = 0
-    for i, (x, posval) in enumerate(zip(vec, labels)):
-        pos_prob = apply_model(x, is_positive=True)
-        neg_prob = apply_model(x, is_positive=False)
-        # print(pos_prob, neg_prob, pos_prob > neg_prob, posval)
-        if pos_prob > neg_prob and posval:
-            pos_corr += 1
-            correct += 1
-        elif pos_prob < neg_prob and not posval:
-            neg_corr += 1
-            correct += 1
-
-    print("Total cor", correct / len(vec))
-    print("Pos cor", pos_corr / pos)
-    print("Neg cor", neg_corr / neg)
-
-
-print("Validating training vectors")
-validate(training_vectors, training_labels)
-print("Validating validation vectors")
-validate(validation_vectors, validation_labels)
+for alpha in range(2, step=0.2):
+    print(f"Running model with alpha = {alpha}")
+    run_model_with_alpha(alpha)
