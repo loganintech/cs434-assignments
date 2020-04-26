@@ -209,15 +209,9 @@ def run_model(max_features=2000, min_df=0, max_df=1.0, alphas=[1.4], is_test_set
 
 def get_best_values():
     # feature_counts = [100, 200, 500, 1000, 2000, 3000, 4000, 5000, 6000]
-    # min_dfs = np.arange(0, 0.3, step=0.05)  # [0.0, 0.05, 0.10, ...]
-    # max_dfs = np.arange(1.0, 0.6, step=-0.05)  # [1.0, 0.95, 0.90, ...]
-
-    # alphas = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
-    # alpha_results = run_model(max_features=2000, alphas=alphas)
-
-    feature_counts = list(map(lambda x: x * 10000, range(3, 11, 2)))
-    min_dfs = [0.0]
-    max_dfs = [1.0]
+    feature_counts = list(map(lambda x: x * 10000, range(3, 12, 2))) # [30k, 50k, 70k, 90k, 11k]
+    min_dfs = np.arange(0, 0.3, step=0.05)  # [0.0, 0.05, 0.10, ...]
+    max_dfs = np.arange(1.0, 0.6, step=-0.05)  # [1.0, 0.95, 0.90, ...]
 
     best_feature = 0
     best_min = min(min_dfs) - 1
@@ -250,6 +244,7 @@ def get_best_values():
 
 if __name__ == "__main__":
 
+    # # Warning this function is stupidly slow
     # get_best_values()
 
     run_model(is_test_set=True, filename="test-prediction1.csv", alphas=[1.0])
