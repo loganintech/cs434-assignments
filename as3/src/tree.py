@@ -220,8 +220,8 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
-			self.num_classes = len(set(bagged_y))
-			self.root = self.build_tree(bagged_X, bagged_y, depth=1)
+			#self.num_classes = len(set(bagged_y))
+			#self.root = self.build_tree(bagged_X, bagged_y, depth=1)
 			##################
 		print()
 
