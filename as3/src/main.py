@@ -51,8 +51,27 @@ def random_forest_testing(x_train, y_train, x_test, y_test):
 	print('Test {}'.format(test_accuracy))
 	preds = rclf.predict(x_test)
 	print('F1 Test {}'.format(f1(y_test, preds)))
-
-
+	
+def create_trees(x_train, y_train, x_test, y_test):
+	train = []
+	test = []
+	y = []
+	for i in range(1, 26):
+		y.append(i)
+		print("LENGTH: " , i)
+		h = DecisionTreeClassifier(max_depth=i)
+		h.fit(x_train, y_train)
+		preds_train = h.predict(x_train)
+		preds_test = h.predict(x_test)
+		train_accuracy = accuracy_score(preds_train, y_train)
+		train.append(train_accuracy)
+		test_accuracy = accuracy_score(preds_test, y_test)
+		test.append(test_accuracy)
+		print('Train {}'.format(train_accuracy))
+		print('Test {}'.format(test_accuracy))
+		preds = h.predict(x_test)
+		print('F1 Test {}'.format(f1(y_test, preds)))
+	return y, train, test
 
 ###################################################
 # Modify for running your experiments accordingly #
