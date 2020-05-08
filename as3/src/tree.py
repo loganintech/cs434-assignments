@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 class Node():
 	"""
@@ -133,7 +134,7 @@ class DecisionTreeClassifier():
 		return gain, left_X, right_X, left_y, right_y
 
 	def calculate_gini_gain(self, y, left_y, right_y):
-			# not a leaf node
+		# not a leaf node
 		# calculate gini impurity and gain
 		gain = 0
 
@@ -209,6 +210,7 @@ class RandomForestClassifier():
 		# YOUR CODE HERE #
 		##################
 
+
 	# fit all trees
 	def fit(self, X, y):
 		bagged_X, bagged_y = self.bag_data(X, y)
@@ -218,17 +220,23 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
+			self.num_classes = len(set(bagged_y))
+			self.root = self.build_tree(bagged_X, bagged_y, depth=1)
+			##################
 		print()
 
 	def bag_data(self, X, y, proportion=1.0):
 		bagged_X = []
 		bagged_y = []
 		for i in range(self.n_trees):
-			continue
+			#continue
 			##################
 			# YOUR CODE HERE #
 			##################
-
+			idx = random.randint(0, 2097)
+			bagged_X.append(X[idx])
+			bagged_y.append(y[idx])
+			##################
 		# ensure data is still numpy arrays
 		return np.array(bagged_X), np.array(bagged_y)
 
@@ -237,14 +245,29 @@ class RandomForestClassifier():
 		preds = []
 
 		# remove this one \/
-		preds = np.ones(len(X)).astype(int)
+		#preds = np.ones(len(X)).astype(int)
 		# ^that line is only here so the code runs
 
 		##################
 		# YOUR CODE HERE #
 		##################
+		#need to sub sample (without replacement) max_features number of features from the feature
+		#set and then pick fi with the highest benefit from max_features sampled features.
+		f = []
+		for i in range(self.max_features):
+			f.append(random(X))
+		preds = [self._predict(example) for example in f]
+		##################
 		return preds
 
+	def _predict(self, example):
+		node = self.root
+		while node.left_tree:
+			if example[node.feature] < node.split:
+				node = node.left_tree
+			else:
+				node = node.right_tree
+		return node.prediction
 
 ################################################
 # YOUR CODE GOES IN ADABOOSTCLASSIFIER         #
