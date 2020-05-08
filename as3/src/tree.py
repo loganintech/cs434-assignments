@@ -141,6 +141,12 @@ class DecisionTreeClassifier():
 			########################################
 			#       YOUR CODE GOES HERE            #
 			########################################
+			left_side = len(left_y)/(len(left_y)+len(right_y))
+			right_side = len(right_y)/(len(left_y)+len(right_y))
+			s = -left_side*np.log2(left_side)-right_side*np.log2(right_side)
+
+
+			sL = 
 
 			return gain
 		# we hit leaf node
