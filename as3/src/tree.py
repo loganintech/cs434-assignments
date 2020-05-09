@@ -251,11 +251,9 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
-		#need to sub sample (without replacement) max_features number of features from the feature
-		#set and then pick fi with the highest benefit from max_features sampled features.
 		f = []
 		for i in range(self.max_features):
-			f.append(random(X))
+			f.append(random.choice(X))
 		preds = [self._predict(example) for example in f]
 		##################
 		return preds
@@ -276,13 +274,3 @@ class RandomForestClassifier():
 class AdaBoostClassifier():
 	def __init__(self):
 		pass
-
-
-
-
-
-
-
-
-
-
