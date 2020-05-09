@@ -74,6 +74,9 @@ class DecisionTreeClassifier():
 		# which features we are considering for splitting on
 		self.features_idx = np.arange(0, X.shape[1])
 
+		#sample features
+		
+
 		# store data and information about best split
 		# used when building subtrees recursively
 		best_feature = None
@@ -159,7 +162,7 @@ class DecisionTreeClassifier():
 					c_minus += 1
 			t1 = (c_plus / (c_plus + c_minus))
 			t2 = (c_minus / (c_plus + c_minus))
-			u_y = (t1 ** 2) - (t2 ** 2)
+			u_y = 1 -(t1 ** 2) - (t2 ** 2)
 			for j in range(0, len(left_y)):
 				if (left_y[j] == 1):
 					cl_plus += 1
@@ -167,7 +170,7 @@ class DecisionTreeClassifier():
 					cl_minus += 1
 			t1 = (cl_plus / (cl_plus + cl_minus))
 			t2 = (cl_minus / (cl_plus + cl_minus))
-			u_left_y = (t1 ** 2) - (t2 ** 2)
+			u_left_y = 1-(t1 ** 2) - (t2 ** 2)
 			for k in range(0, len(right_y)):
 				if (right_y[k] ==  1):
 					cr_plus += 1
@@ -175,7 +178,7 @@ class DecisionTreeClassifier():
 					cr_minus += 1
 			t1 = (cr_plus / (cr_plus + cr_minus))
 			t2 = (cr_minus / (cr_plus + cr_minus))
-			u_right_y = (t1 ** 2) - (t2 ** 2)
+			u_right_y = 1-(t1 ** 2) - (t2 ** 2)
 			pl = (cl_plus + cl_minus) / (c_plus + c_minus)
 			pr = (cr_plus + cr_minus) / (c_plus + c_minus)
 			gain = u_y - (pl * u_left_y) - (pr * u_right_y)
@@ -209,19 +212,23 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
+		#make n trees
 
 
 	# fit all trees
 	def fit(self, X, y):
-		bagged_X, bagged_y = self.bag_data(X, y)
+		#bagged_X, bagged_y = self.bag_data(X, y)
 		print('Fitting Random Forest...\n')
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
 			# YOUR CODE HERE #
 			##################
-			#self.num_classes = len(set(bagged_y))
-			#self.root = self.build_tree(bagged_X, bagged_y, depth=1)
+			bagged_X, bagged_y = self.bag_data(X, y)
+			trees = []
+			x = DecisionTreeClassifier(self.max_depth)
+			x.fit(bagged_X, bagged_y)
+			trees.append(x)
 			##################
 		print()
 
@@ -233,15 +240,15 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
-			idx = random.randint(0, 2097)
-			bagged_X.append(X[idx])
-			bagged_y.append(y[idx])
+			for j in range(0, 2097):
+				idx = random.randint(0, 2097)
+				bagged_X.append(X[idx])
+				bagged_y.append(y[idx])
 			##################
 		# ensure data is still numpy arrays
 		return np.array(bagged_X), np.array(bagged_y)
 
-
-	def predict(self, X):
+	def predict(self, X, f):
 		preds = []
 
 		# remove this one \/
@@ -251,17 +258,15 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
-		#need to sub sample (without replacement) max_features number of features from the feature
-		#set and then pick fi with the highest benefit from max_features sampled features.
 		f = []
 		for i in range(self.max_features):
-			f.append(random(X))
+			f.append(random.choice(X))
 		preds = [self._predict(example) for example in f]
 		##################
 		return preds
 
 	def _predict(self, example):
-		node = self.root
+		#node = self.root
 		while node.left_tree:
 			if example[node.feature] < node.split:
 				node = node.left_tree
@@ -276,13 +281,3 @@ class RandomForestClassifier():
 class AdaBoostClassifier():
 	def __init__(self):
 		pass
-
-
-
-
-
-
-
-
-
-
