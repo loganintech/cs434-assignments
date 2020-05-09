@@ -74,6 +74,9 @@ class DecisionTreeClassifier():
 		# which features we are considering for splitting on
 		self.features_idx = np.arange(0, X.shape[1])
 
+		#sample features
+
+
 		# store data and information about best split
 		# used when building subtrees recursively
 		best_feature = None
@@ -108,7 +111,7 @@ class DecisionTreeClassifier():
 						best_right_X = right_X
 						best_left_y = left_y
 						best_right_y = right_y
-		
+
 		# if we haven't hit a leaf node
 		# add subtrees recursively
 		if best_gain > 0.0:
@@ -209,19 +212,23 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
+		#make n trees
 
 
 	# fit all trees
 	def fit(self, X, y):
-		bagged_X, bagged_y = self.bag_data(X, y)
+		#bagged_X, bagged_y = self.bag_data(X, y)
 		print('Fitting Random Forest...\n')
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
 			# YOUR CODE HERE #
 			##################
-			#self.num_classes = len(set(bagged_y))
-			#self.root = self.build_tree(bagged_X, bagged_y, depth=1)
+			bagged_X, bagged_y = self.bag_data(X, y)
+			trees = []
+			x = DecisionTreeClassifier(self.max_depth)
+			x.fit(bagged_X, bagged_y)
+			trees.append(x)
 			##################
 		print()
 
@@ -233,15 +240,15 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
-			idx = random.randint(0, 2097)
-			bagged_X.append(X[idx])
-			bagged_y.append(y[idx])
+			for j in range(0, 2097):
+				idx = random.randint(0, 2097)
+				bagged_X.append(X[idx])
+				bagged_y.append(y[idx])
 			##################
 		# ensure data is still numpy arrays
 		return np.array(bagged_X), np.array(bagged_y)
 
-
-	def predict(self, X):
+	def predict(self, X, f):
 		preds = []
 
 		# remove this one \/
@@ -251,17 +258,15 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
-		#need to sub sample (without replacement) max_features number of features from the feature
-		#set and then pick fi with the highest benefit from max_features sampled features.
 		f = []
 		for i in range(self.max_features):
-			f.append(random(X))
+			f.append(random.choice(X))
 		preds = [self._predict(example) for example in f]
 		##################
 		return preds
 
 	def _predict(self, example):
-		node = self.root
+		#node = self.root
 		while node.left_tree:
 			if example[node.feature] < node.split:
 				node = node.left_tree
@@ -276,13 +281,3 @@ class RandomForestClassifier():
 class AdaBoostClassifier():
 	def __init__(self):
 		pass
-
-
-
-
-
-
-
-
-
-
