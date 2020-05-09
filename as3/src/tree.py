@@ -159,7 +159,7 @@ class DecisionTreeClassifier():
 					c_minus += 1
 			t1 = (c_plus / (c_plus + c_minus))
 			t2 = (c_minus / (c_plus + c_minus))
-			u_y = (t1 ** 2) - (t2 ** 2)
+			u_y = 1 - (t1 ** 2) - (t2 ** 2)
 			for j in range(0, len(left_y)):
 				if (left_y[j] == 1):
 					cl_plus += 1
@@ -167,7 +167,7 @@ class DecisionTreeClassifier():
 					cl_minus += 1
 			t1 = (cl_plus / (cl_plus + cl_minus))
 			t2 = (cl_minus / (cl_plus + cl_minus))
-			u_left_y = (t1 ** 2) - (t2 ** 2)
+			u_left_y = 1 - (t1 ** 2) - (t2 ** 2)
 			for k in range(0, len(right_y)):
 				if (right_y[k] ==  1):
 					cr_plus += 1
@@ -175,7 +175,7 @@ class DecisionTreeClassifier():
 					cr_minus += 1
 			t1 = (cr_plus / (cr_plus + cr_minus))
 			t2 = (cr_minus / (cr_plus + cr_minus))
-			u_right_y = (t1 ** 2) - (t2 ** 2)
+			u_right_y = 1 - (t1 ** 2) - (t2 ** 2)
 			pl = (cl_plus + cl_minus) / (c_plus + c_minus)
 			pr = (cr_plus + cr_minus) / (c_plus + c_minus)
 			gain = u_y - (pl * u_left_y) - (pr * u_right_y)
