@@ -155,7 +155,7 @@ class DecisionTreeClassifier():
 			for i in range(0, len(y)):
 				if (y[i] == 1):
 					c_plus += 1
-				elif (y[i] == 0):
+				else:
 					c_minus += 1
 			t1 = (c_plus / (c_plus + c_minus))
 			t2 = (c_minus / (c_plus + c_minus))
@@ -163,7 +163,7 @@ class DecisionTreeClassifier():
 			for j in range(0, len(left_y)):
 				if (left_y[j] == 1):
 					cl_plus += 1
-				elif (left_y[j] == 0):
+				else:
 					cl_minus += 1
 			t1 = (cl_plus / (cl_plus + cl_minus))
 			t2 = (cl_minus / (cl_plus + cl_minus))
@@ -171,7 +171,7 @@ class DecisionTreeClassifier():
 			for k in range(0, len(right_y)):
 				if (right_y[k] ==  1):
 					cr_plus += 1
-				elif (right_y[k] == 0):
+				else:
 					cr_minus += 1
 			t1 = (cr_plus / (cr_plus + cr_minus))
 			t2 = (cr_minus / (cr_plus + cr_minus))
