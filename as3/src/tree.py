@@ -239,13 +239,19 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
+
+			temp_X = []
+			temp_y = []
 			for j in range(0, 2097):
 				idx = random.randint(0, 2097)
-				bagged_X.append(X[idx])
-				bagged_y.append(y[idx])
-			##################
+				temp_X.append(X[idx])
+				temp_y.append(y[idx])
+			bagged_X.append(temp_X)
+			bagged_y.append(temp_y)
+		##################
 		# ensure data is still numpy arrays
 		return np.array(bagged_X), np.array(bagged_y)
+
 
 	def predict(self, X, f):
 		preds = []
