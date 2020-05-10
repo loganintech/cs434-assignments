@@ -77,6 +77,7 @@ class DecisionTreeClassifier():
 		#sample features
 
 
+
 		# store data and information about best split
 		# used when building subtrees recursively
 		best_feature = None
@@ -218,16 +219,32 @@ class RandomForestClassifier():
 	# fit all trees
 	def fit(self, X, y):
 		bagged_X, bagged_y = self.bag_data(X, y)
+		trees = []
 		print('Fitting Random Forest...\n')
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
 			# YOUR CODE HERE #
 			##################
-			trees = []
-			x = DecisionTreeClassifier(self.max_depth)
-			x.fit(bagged_X[i], bagged_y[i])
-			trees.append(x)
+			kept_features = []
+			for j in range(self.max_features):
+				pick = random.randint(0, bagged_X[0].shape)  # random number between 0 and 50
+				for k in kept_features:
+					if pick == k:
+						j -= 1
+					else:
+						kept_features.append(pick)
+
+			#Code needed here: strip columns from all bagged_X except kept_features
+			for j in bagged_X:
+
+
+
+			clf = DecisionTreeClassifier(max_depth=self.max_depth)
+			clf.fit(bagged_X[i], bagged_y[i])
+
+
+			trees.append(clf)
 			##################
 		print()
 
@@ -239,7 +256,6 @@ class RandomForestClassifier():
 			##################
 			# YOUR CODE HERE #
 			##################
-
 			temp_X = []
 			temp_y = []
 			for j in range(0, 2097):
