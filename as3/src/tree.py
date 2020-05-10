@@ -4,7 +4,6 @@ import random
 class Node():
 	"""
 	Node of decision tree
-
 	Parameters:
 	-----------
 	prediction: int
@@ -29,7 +28,6 @@ class Node():
 class DecisionTreeClassifier():
 	"""
 	Decision Tree Classifier. Class for building the decision tree and making predictions
-
 	Parameters:
 	------------
 	max_depth: int
@@ -69,12 +67,12 @@ class DecisionTreeClassifier():
 		return accuracy
 
 	# function to build a decision tree
-	def build_tree(self, X, y, depth, features=0):
+	def build_tree(self, X, y, depth):
 		num_samples, num_features = X.shape
 		# which features we are considering for splitting on
-
 		self.features_idx = np.arange(0, X.shape[1])
 
+		#sample features
 
 
 
@@ -96,13 +94,6 @@ class DecisionTreeClassifier():
 		# if we haven't hit the maximum depth, keep building
 		if depth <= self.max_depth:
 			# consider each feature
-			if features != 0:
-				# generate list of max_features
-				kept_features = set([])
-				while len(kept_features) < features:
-					kept_features.add(random.randint(0, X.shape[1]))  # random number between 0 and 50
-				self.features_idx = kept_features
-
 			for feature in self.features_idx:
 				# consider the set of all values for that feature to split on
 				possible_splits = np.unique(X[:, feature])
@@ -164,7 +155,7 @@ class DecisionTreeClassifier():
 			pr = 0
 
 			for i in range(0, len(y)):
-				if y[i] == 1:
+				if (y[i] == 1):
 					c_plus += 1
 				else:
 					c_minus += 1
@@ -172,7 +163,7 @@ class DecisionTreeClassifier():
 			t2 = (c_minus / (c_plus + c_minus))
 			u_y = 1 - (t1 ** 2) - (t2 ** 2)
 			for j in range(0, len(left_y)):
-				if left_y[j] == 1:
+				if (left_y[j] == 1):
 					cl_plus += 1
 				else:
 					cl_minus += 1
@@ -180,7 +171,7 @@ class DecisionTreeClassifier():
 			t2 = (cl_minus / (cl_plus + cl_minus))
 			u_left_y = 1 - (t1 ** 2) - (t2 ** 2)
 			for k in range(0, len(right_y)):
-				if right_y[k] ==  1:
+				if (right_y[k] ==  1):
 					cr_plus += 1
 				else:
 					cr_minus += 1
@@ -200,9 +191,7 @@ class RandomForestClassifier():
 	"""
 	Random Forest Classifier. Build a forest of decision trees.
 	Use this forest for ensemble predictions
-
 	YOU WILL NEED TO MODIFY THE DECISION TREE VERY SLIGHTLY TO HANDLE FEATURE BAGGING
-
 	Parameters:
 	-----------
 	n_trees: int
@@ -224,25 +213,31 @@ class RandomForestClassifier():
 
 
 	# fit all trees
-	def fit(self, X, y):
+	'''def fit(self, X, y):
 		bagged_X, bagged_y = self.bag_data(X, y)
-		print('Fitting Random Forest...\n')
 		trees = []
+		print('Fitting Random Forest...\n')
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
 			# YOUR CODE HERE #
 			##################
-			x = DecisionTreeClassifier(max_depth=self.max_depth)
-			x.num_classes = len(set(bagged_y[i]))
-			x.root = x.build_tree(bagged_X[i], bagged_y[i], depth=1, features=self.max_features)
+			kept_features = []
+			for j in range(self.max_features):
+				pick = random.randint(0, bagged_X[0].shape)  # random number between 0 and 50
+				for k in kept_features:
+					if pick == k:
+						j -= 1
+					else:
+						kept_features.append(pick)
+
+			#Code needed here: strip columns from all bagged_X except kept_features
+			for j in bagged_X:
+				x = DecisionTreeClassifier(max_depth=self.max_depth)
+				x.fit(bagged_X[i], bagged_y[i])
+
+
 			trees.append(x)
-			preds_train = x.predict(bagged_X[i])
-
-			train_accuracy = x.accuracy_score(preds_train, bagged_y[i])
-
-			print('Train'+i+' {}'.format(train_accuracy))
-
 			##################
 		print()
 
@@ -250,6 +245,7 @@ class RandomForestClassifier():
 		bagged_X = []
 		bagged_y = []
 		for i in range(self.n_trees):
+			continue
 			##################
 			# YOUR CODE HERE #
 			##################
@@ -291,11 +287,47 @@ class RandomForestClassifier():
 			else:
 				node = node.right_tree
 		return node.prediction
+		'''
 
 ################################################
 # YOUR CODE GOES IN ADABOOSTCLASSIFIER         #
 # MUST MODIFY THIS EXISTING DECISION TREE CODE #
 ################################################
 class AdaBoostClassifier():
-	def __init__(self):
-		pass
+	def __init__(self, M):
+		self.M = M
+
+	def change_labels(self, y_train, y_test):
+		y_train[y_train == 0] = -1
+		y_test[y_test == 0] = -1
+
+	def indicator(self, h_t, S):
+		for i in range(len(S)):
+
+
+	def calculate_weighted_error(self, h_t, S, D_t):
+		error = 0
+		for i in range(0, S.len()):
+			error += (D_t * self.indicator(h_t, S))
+		return error
+
+	def calculate_alpha(self, e_t):
+		term = (1 - e_t) / e_t
+		alpha = (1/2) * np.log(term)
+		return alpha
+
+	def ada_boost(self, S):
+		errors = []
+		alphas = []
+		D = []
+		h = []
+		for t in range(0, self.M):
+			D[t] = 1 / (S.shape[0])
+			h[t] = DecisionTreeClassifier(max_depth=1)
+			#h[t].fit(bagged_X[i], bagged_y[i])
+			#calculate error
+			errors[t] = self.calculate_weighted_error(h[t], S, D[t])
+			#calculate alpha
+			alphas[t] = self.calculate_alpha(errors[t])
+
+
