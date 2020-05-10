@@ -240,11 +240,11 @@ class RandomForestClassifier():
 
 
 
-			clf = DecisionTreeClassifier(max_depth=self.max_depth)
-			clf.fit(bagged_X[i], bagged_y[i])
+			x = DecisionTreeClassifier(max_depth=self.max_depth)
+			x.fit(bagged_X[i], bagged_y[i])
 
 
-			trees.append(clf)
+			trees.append(x)
 			##################
 		print()
 
