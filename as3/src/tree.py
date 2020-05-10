@@ -100,7 +100,7 @@ class DecisionTreeClassifier():
 				# generate list of max_features
 				kept_features = set([])
 				while len(kept_features) < features:
-					kept_features.add(random.randint(0, X.shape[1]))  # random number between 0 and 50
+					kept_features.add(random.randint(0, X.shape[1]-1))  # random number between 0 and 50
 				self.features_idx = kept_features
 
 			for feature in self.features_idx:
@@ -239,9 +239,9 @@ class RandomForestClassifier():
 			trees.append(x)
 			preds_train = x.predict(bagged_X[i])
 
-			train_accuracy = x.accuracy_score(preds_train, bagged_y[i])
+			train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
 
-			print('Train'+i+' {}'.format(train_accuracy))
+			print('Train {} {}'.format(i, train_accuracy))
 
 			##################
 		print()
@@ -284,7 +284,7 @@ class RandomForestClassifier():
 		return preds
 
 	def _predict(self, example):
-		#node = self.root
+		node = self.root
 		while node.left_tree:
 			if example[node.feature] < node.split:
 				node = node.left_tree
