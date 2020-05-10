@@ -21,7 +21,6 @@ def load_args():
 
 	return args
 
-
 def county_info(args):
 	county_dict = load_dictionary(args.root_dir)
 	dictionary_info(county_dict)
@@ -40,8 +39,8 @@ def decision_tree_testing(x_train, y_train, x_test, y_test):
 	print('F1 Test {}'.format(f1(y_test, preds)))
 
 def random_forest_testing(x_train, y_train, x_test, y_test):
-	print('Random Forest\n\n')
-	rclf = RandomForestClassifier(max_depth=7, max_features=11, n_trees=10)
+	'''print('Random Forest\n\n')
+	rclf = RandomForestClassifier(max_depth=7, max_features=11, n_trees=50)
 	rclf.fit(x_train, y_train)
 	preds_train = rclf.predict(x_train)
 	preds_test = rclf.predict(x_test)
@@ -51,7 +50,8 @@ def random_forest_testing(x_train, y_train, x_test, y_test):
 	print('Test {}'.format(test_accuracy))
 	preds = rclf.predict(x_test)
 	print('F1 Test {}'.format(f1(y_test, preds)))
-	
+'''
+
 def create_trees(x_train, y_train, x_test, y_test):
 	train = []
 	test = []
@@ -81,10 +81,15 @@ if __name__ == '__main__':
 	x_train, y_train, x_test, y_test = load_data(args.root_dir)
 	if args.county_dict == 1:
 		county_info(args)
-	if args.decision_tree == 1:
-		decision_tree_testing(x_train, y_train, x_test, y_test)
+	#if args.decision_tree == 1:
+	#	decision_tree_testing(x_train, y_train, x_test, y_test)
 	if args.random_forest == 1:
 		random_forest_testing(x_train, y_train, x_test, y_test)
+	y, train, test = create_trees(x_train, y_train, x_test, y_test)
+	plt.plot(y, test)
+	plt.plot(y, train)
+	plt.show()
+
 
 	print('Done')
 	
