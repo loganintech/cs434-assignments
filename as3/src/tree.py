@@ -217,17 +217,16 @@ class RandomForestClassifier():
 
 	# fit all trees
 	def fit(self, X, y):
-		#bagged_X, bagged_y = self.bag_data(X, y)
+		bagged_X, bagged_y = self.bag_data(X, y)
 		print('Fitting Random Forest...\n')
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
 			# YOUR CODE HERE #
 			##################
-			bagged_X, bagged_y = self.bag_data(X, y)
 			trees = []
 			x = DecisionTreeClassifier(self.max_depth)
-			x.fit(bagged_X, bagged_y)
+			x.fit(bagged_X[i], bagged_y[i])
 			trees.append(x)
 			##################
 		print()
@@ -236,7 +235,7 @@ class RandomForestClassifier():
 		bagged_X = []
 		bagged_y = []
 		for i in range(self.n_trees):
-			#continue
+			continue
 			##################
 			# YOUR CODE HERE #
 			##################
