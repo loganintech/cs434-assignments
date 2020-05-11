@@ -28,7 +28,7 @@ def county_info(args):
 
 def decision_tree_testing(x_train, y_train, x_test, y_test):
     print('Decision Tree\n\n')
-    clf = DecisionTreeClassifier(max_depth=20)
+    clf = DecisionTreeClassifier(max_depth=25)
     clf.fit(x_train, y_train)
     preds_train = clf.predict(x_train)
     preds_test = clf.predict(x_test)
@@ -54,9 +54,9 @@ def random_forest_testing(x_train, y_train, x_test, y_test):
     print('F1 Test {}'.format(f1(y_test, preds)))
 
 
-def ada_boost_testing(x_train, y_train, x_test, y_test):
+def ada_boost_testing(x_train, y_train, x_test, y_test, trees):
     print('AdaBoost\n\n')
-    ada = AdaBoostClassifier(trees=20)
+    ada = AdaBoostClassifier(trees=trees)
 
     ada.fit(x_train, y_train)
     preds_train = ada.predict(x_train)
@@ -105,6 +105,8 @@ if __name__ == '__main__':
     if args.random_forest == 1:
         random_forest_testing(x_train, y_train, x_test, y_test)
     if args.ada_boost == 1:
-        ada_boost_testing(x_train, y_train, x_test, y_test)
+        for i in range(30, 200, 10):
+            print(f"Testing AdaBoost with {i} trees")
+            ada_boost_testing(x_train, y_train, x_test, y_test, i)
 
     print('Done')

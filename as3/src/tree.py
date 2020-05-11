@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import functools
 
 
 class Node():
@@ -155,9 +156,6 @@ class DecisionTreeClassifier():
 
         if len(left_y) > 0 and len(right_y) > 0:
 
-            ########################################
-            #       YOUR CODE GOES HERE            #
-            ########################################
             c_plus = 0
             c_minus = 0
             cl_plus = 0
@@ -175,6 +173,7 @@ class DecisionTreeClassifier():
             t1 = (c_plus / (c_plus + c_minus))
             t2 = (c_minus / (c_plus + c_minus))
             u_y = 1 - (t1 ** 2) - (t2 ** 2)
+
             for j in range(0, len(left_y)):
                 if left_y[j] == 1:
                     cl_plus += 1
@@ -183,6 +182,7 @@ class DecisionTreeClassifier():
             t1 = (cl_plus / (cl_plus + cl_minus))
             t2 = (cl_minus / (cl_plus + cl_minus))
             u_left_y = 1 - (t1 ** 2) - (t2 ** 2)
+
             for k in range(0, len(right_y)):
                 if right_y[k] == 1:
                     cr_plus += 1
@@ -191,6 +191,7 @@ class DecisionTreeClassifier():
             t1 = (cr_plus / (cr_plus + cr_minus))
             t2 = (cr_minus / (cr_plus + cr_minus))
             u_right_y = 1 - (t1 ** 2) - (t2 ** 2)
+
             pl = (cl_plus + cl_minus) / (c_plus + c_minus)
             pr = (cr_plus + cr_minus) / (c_plus + c_minus)
             gain = u_y - (pl * u_left_y) - (pr * u_right_y)
@@ -311,11 +312,6 @@ class RandomForestClassifier():
                 node = node.right_tree
         return node.prediction
 
-################################################
-# YOUR CODE GOES IN ADABOOSTCLASSIFIER         #
-# MUST MODIFY THIS EXISTING DECISION TREE CODE #
-################################################
-
 
 class AdaBoostClassifier():
     def __init__(self, trees):
@@ -334,50 +330,60 @@ class AdaBoostClassifier():
 
     def ada_boost(self, X, y):
         self.errors = [0] * self.trees
-        self.alphas = [0] * self.trees
-        self.weights = [[0]] * self.trees
-        self.classifier = [0] * self.trees
+        self.alphas = [0] * (self.trees + 1)
+        self.weights = [[0]] * (self.trees + 1)
+        self.classifiers = [0] * self.trees
         for t in range(self.trees):
             if t == 0:
                 self.weights[0] = [1 / (X.shape[0])] * X.shape[0]
-                self.alphas[0] = 1
+                self.alphas[0] = 0
 
-            self.classifier[t] = DecisionTreeAda(
-                max_depth=1, weights=self.weights[t if t == 0 else t - 1], alpha=self.alphas[t if t == 0 else t - 1])
-            self.classifier[t].fit(X, y)
+            self.classifiers[t] = DecisionTreeAda(
+                max_depth=1, weights=self.weights[t], alpha=self.alphas[t])
+            self.classifiers[t].fit(X, y)
             # calculate error
-            self.errors[t] = self.classifier[t].get_weighted_error(X, y)
-            print(f"Error[{t}]: {self.errors[t]}")
+            self.errors[t] = self.classifiers[t].get_weighted_error(X, y)
+            # print(f"Error[{t}]: {self.errors[t]}")
             # calculate alpha
-            self.alphas[t] = self.calculate_alpha(self.errors[t])
-            print(f"Alpha[{t}]: {self.alphas[t]}")
-            self.weights[t] = self.classifier[t].get_modified_weights(
+            self.alphas[t+1] = self.calculate_alpha(self.errors[t])
+            # print(f"Alpha[{t}]: {self.alphas[t]}")
+            self.weights[t+1] = self.classifiers[t].get_modified_weights(
                 X, y, self.alphas[t])
 
     def predict(self, X):
-        best_accuracy_score = 0
-        classifier = None
-        best = 0
-        for i in range(self.trees):
-            score = self.classifier[i].accuracy_score(
-                self.x_train, self.y_train)
-            if best_accuracy_score < score:
-                best_accuracy_score = score
-                classifier = self.classifier[i]
-                best = i
 
-        print(f"Best classifier was {i}")
-        prediction = np.array(classifier.predict(X))
+        pred = 0
+        predictions = []
+        for i in range(self.trees):
+            thispred = self.classifiers[i].predict(X)
+            thispred = np.multiply(thispred, self.alphas[i])
+            predictions.append(thispred)
+
+        prediction = [0] * len(predictions[0])
+        for preds in predictions:
+            for i in range(len(prediction)):
+                prediction[i] += preds[i]
+
+        for i in range(len(prediction)):
+            prediction[i] = 0 if prediction[i] < 0 else 1
+
         return prediction
 
 
 class DecisionTreeAda():
-    # Weights is D
-    def __init__(self, weights=None, alpha=0, max_depth=1):
+    """
+    Decision Tree Classifier. Class for building the decision tree and making predictions
+
+    Parameters:
+    ------------
+    max_depth: int
+            The maximum depth to build the tree. Root is at depth 0, a single split makes depth 1 (decision stump)
+    """
+
+    def __init__(self, max_depth=None, weights=None, alpha=0):
+        self.max_depth = max_depth
         self.weights = weights
         self.alpha = alpha
-        self.preds = None
-        self.max_depth = max_depth
 
     # take in features X and labels y
     # build a tree
@@ -387,8 +393,9 @@ class DecisionTreeAda():
 
     # make prediction for each example of features X
     def predict(self, X):
-        self.preds = [self._predict(example) for example in X]
-        return self.preds
+        preds = [self._predict(example) for example in X]
+        # print(preds)
+        return preds
 
     # prediction for a given example
     # traverse tree by following splits at nodes
@@ -404,29 +411,10 @@ class DecisionTreeAda():
     # accuracy
     def accuracy_score(self, X, y):
         preds = self.predict(X)
-        accuracy = (preds == y).sum() / len(y)
+        accuracy = (preds == y).sum()/len(y)
         return accuracy
 
-    def get_weighted_error(self, X, y):
-        preds = self.predict(X)
-        weight = 0
-        for i in range(len(preds)):
-            if preds[i] != y[i]:
-                weight += self.weights[i]
-        return weight
-
-    def get_modified_weights(self, X, y, alpha):
-        preds = self.predict(X)
-        weights = self.weights
-        for i in range(len(weights)):
-            if preds[i] == y[i]:
-                weights[i] = weights[i] * (-np.e ** alpha)
-            else:
-                weights[i] = weights[i] * (np.e ** alpha)
-        return weights
-
     # function to build a decision tree
-
     def build_tree(self, X, y, depth, features=0):
         num_samples, num_features = X.shape
         # which features we are considering for splitting on
@@ -445,9 +433,16 @@ class DecisionTreeAda():
 
         # what we would predict at this node if we had to
         # majority class
-        num_samples_per_class = [np.sum(y == i)
-                                 for i in range(self.num_classes)]
-        prediction = np.argmax(num_samples_per_class)
+
+        neg = 0
+        pos = 0
+        for val in y:
+            if val < 0:
+                neg += 1
+            else:
+                pos += 1
+
+        prediction = 1 if np.argmax([neg, pos]) == 1 else -1
 
         # if we haven't hit the maximum depth, keep building
         if depth <= self.max_depth:
@@ -457,7 +452,7 @@ class DecisionTreeAda():
                 kept_features = set([])
                 while len(kept_features) < features:
                     # random number between 0 and 50
-                    kept_features.add(random.randint(0, X.shape[1] - 1))
+                    kept_features.add(random.randint(0, X.shape[1]-1))
                 self.features_idx = kept_features
 
             for feature in self.features_idx:
@@ -511,9 +506,6 @@ class DecisionTreeAda():
 
         if len(left_y) > 0 and len(right_y) > 0:
 
-            ########################################
-            #       YOUR CODE GOES HERE            #
-            ########################################
             c_plus = 0
             c_minus = 0
             cl_plus = 0
@@ -528,7 +520,6 @@ class DecisionTreeAda():
                     c_plus += 1
                 else:
                     c_minus += 1
-
             t1 = (c_plus / (c_plus + c_minus))
             t2 = (c_minus / (c_plus + c_minus))
             u_y = 1 - (t1 ** 2) - (t2 ** 2)
@@ -538,7 +529,6 @@ class DecisionTreeAda():
                     cl_plus += 1
                 else:
                     cl_minus += 1
-
             t1 = (cl_plus / (cl_plus + cl_minus))
             t2 = (cl_minus / (cl_plus + cl_minus))
             u_left_y = 1 - (t1 ** 2) - (t2 ** 2)
@@ -548,16 +538,33 @@ class DecisionTreeAda():
                     cr_plus += 1
                 else:
                     cr_minus += 1
-
             t1 = (cr_plus / (cr_plus + cr_minus))
             t2 = (cr_minus / (cr_plus + cr_minus))
             u_right_y = 1 - (t1 ** 2) - (t2 ** 2)
+
             pl = (cl_plus + cl_minus) / (c_plus + c_minus)
             pr = (cr_plus + cr_minus) / (c_plus + c_minus)
             gain = u_y - (pl * u_left_y) - (pr * u_right_y)
-
             return gain
         # we hit leaf node
         # don't have any gain, and don't want to divide by 0
         else:
             return 0
+
+    def get_weighted_error(self, X, y):
+        preds = self.predict(X)
+        weight = 0.0001
+        for i in range(len(preds)):
+            if preds[i] != y[i]:
+                weight += self.weights[i]
+        return weight
+
+    def get_modified_weights(self, X, y, alpha):
+        preds = self.predict(X)
+        weights = self.weights
+        for i in range(len(weights)):
+            if preds[i] == y[i]:
+                weights[i] = weights[i] * (np.e ** -alpha)
+            else:
+                weights[i] = weights[i] * (np.e ** alpha)
+        return weights
