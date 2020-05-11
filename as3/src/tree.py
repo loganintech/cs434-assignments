@@ -67,7 +67,7 @@ class DecisionTreeClassifier():
     # accuracy
     def accuracy_score(self, X, y):
         preds = self.predict(X)
-        accuracy = (preds == y).sum() / len(y)
+        accuracy = (preds == y).sum()/len(y)
         return accuracy
 
     # function to build a decision tree
@@ -92,32 +92,35 @@ class DecisionTreeClassifier():
         num_samples_per_class = [np.sum(y == i)
                                  for i in range(self.num_classes)]
         prediction = np.argmax(num_samples_per_class)
-        # consider each feature
-        if features != 0:
-            # generate list of max_features
-            kept_features = set([])
-            while len(kept_features) < features:
-                # random number between 0 and 50
-                kept_features.add(random.randint(0, X.shape[1] - 1))
-            self.features_idx = kept_features
 
-        for feature in self.features_idx:
-            # consider the set of all values for that feature to split on
-            possible_splits = np.unique(X[:, feature])
-            for split in possible_splits:
-                # get the gain and the data on each side of the split
-                # >= split goes on right, < goes on left
-                gain, left_X, right_X, left_y, right_y = self.check_split(
-                    X, y, feature, split)
-                # if we have a better gain, use this split and keep track of data
-                if gain > best_gain:
-                    best_gain = gain
-                    best_feature = feature
-                    best_split = split
-                    best_left_X = left_X
-                    best_right_X = right_X
-                    best_left_y = left_y
-                    best_right_y = right_y
+        # if we haven't hit the maximum depth, keep building
+        if depth <= self.max_depth:
+            # consider each feature
+            if features != 0:
+                # generate list of max_features
+                kept_features = set([])
+                while len(kept_features) < features:
+                    # random number between 0 and 50
+                    kept_features.add(random.randint(0, X.shape[1]-1))
+                self.features_idx = kept_features
+
+            for feature in self.features_idx:
+                # consider the set of all values for that feature to split on
+                possible_splits = np.unique(X[:, feature])
+                for split in possible_splits:
+                    # get the gain and the data on each side of the split
+                    # >= split goes on right, < goes on left
+                    gain, left_X, right_X, left_y, right_y = self.check_split(
+                        X, y, feature, split)
+                    # if we have a better gain, use this split and keep track of data
+                    if gain > best_gain:
+                        best_gain = gain
+                        best_feature = feature
+                        best_split = split
+                        best_left_X = left_X
+                        best_right_X = right_X
+                        best_left_y = left_y
+                        best_right_y = right_y
 
         # if we haven't hit a leaf node
         # add subtrees recursively
@@ -230,7 +233,7 @@ class RandomForestClassifier():
     def fit(self, X, y):
         bagged_X, bagged_y = self.bag_data(X, y)
         print('Fitting Random Forest...\n')
-        trees = []
+        self.forest = []
         for i in range(self.n_trees):
             print(i+1, end='\t\r')
             ##################
@@ -240,15 +243,15 @@ class RandomForestClassifier():
             x.num_classes = len(set(bagged_y[i]))
             x.root = x.build_tree(
                 bagged_X[i], bagged_y[i], depth=1, features=self.max_features)
-            trees.append(x)
-            preds_train = x.predict(bagged_X[i])
+            self.forest.append(x)
+            #preds_train = x.predict(bagged_X[i])
 
-            train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
+            #train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
 
-            print(f"Train {i} accuracy {train_accuracy}")
+            #print('Train {} {}'.format(i, train_accuracy))
 
             ##################
-        print()
+        print('Trees have been built!')
 
     def bag_data(self, X, y, proportion=1.0):
         bagged_X = []
@@ -270,24 +273,37 @@ class RandomForestClassifier():
         return np.array(bagged_X), np.array(bagged_y)
 
     def predict(self, X):
-        preds = []
 
         # remove this one \/
-        # preds = np.ones(len(X)).astype(int)
+        #preds = np.ones(len(X)).astype(int)
         # ^that line is only here so the code runs
 
         ##################
         # YOUR CODE HERE #
         ##################
-        f = []
-        for i in range(self.max_features):
-            f.append(random.choice(X))
-        preds = [self._predict(example) for example in f]
-        ##################
+        preds = []
+        pred_sum = []
+        for tree in self.forest:
+            pred_sum.append(tree.predict(X))
+
+        for i in range(len(pred_sum[0])):
+            right = 0
+            wrong = 0
+            for example in pred_sum:
+                if example[i] == 1:
+                    right += 1
+                else:
+                    wrong += 1
+
+            if right >= wrong:
+                preds.append(1)
+            else:
+                preds.append(0)
+
         return preds
 
     def _predict(self, example):
-        # node = self.root
+        node = self.root
         while node.left_tree:
             if example[node.feature] < node.split:
                 node = node.left_tree
