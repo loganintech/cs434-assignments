@@ -227,7 +227,7 @@ class RandomForestClassifier():
 	def fit(self, X, y):
 		bagged_X, bagged_y = self.bag_data(X, y)
 		print('Fitting Random Forest...\n')
-		trees = []
+		self.forest = []
 		for i in range(self.n_trees):
 			print(i+1, end='\t\r')
 			##################
@@ -236,15 +236,15 @@ class RandomForestClassifier():
 			x = DecisionTreeClassifier(max_depth=self.max_depth)
 			x.num_classes = len(set(bagged_y[i]))
 			x.root = x.build_tree(bagged_X[i], bagged_y[i], depth=1, features=self.max_features)
-			trees.append(x)
-			preds_train = x.predict(bagged_X[i])
+			self.forest.append(x)
+			#preds_train = x.predict(bagged_X[i])
 
-			train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
+			#train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
 
-			print('Train {} {}'.format(i, train_accuracy))
+			#print('Train {} {}'.format(i, train_accuracy))
 
 			##################
-		print()
+		print('Trees have been built!')
 
 	def bag_data(self, X, y, proportion=1.0):
 		bagged_X = []
@@ -266,8 +266,8 @@ class RandomForestClassifier():
 		return np.array(bagged_X), np.array(bagged_y)
 
 
-	def predict(self, X, f):
-		preds = []
+	def predict(self, X):
+
 
 		# remove this one \/
 		#preds = np.ones(len(X)).astype(int)
@@ -276,12 +276,30 @@ class RandomForestClassifier():
 		##################
 		# YOUR CODE HERE #
 		##################
-		f = []
-		for i in range(self.max_features):
-			f.append(random.choice(X))
-		preds = [self._predict(example) for example in f]
-		##################
+		preds = []
+		pred_sum = []
+		for tree in self.forest:
+			pred_sum.append(tree.predict(X))
+
+
+		for i in range(len(pred_sum[0])):
+			right = 0
+			wrong = 0
+			for example in pred_sum:
+				if example[i] == 1:
+					right += 1
+				else:
+					wrong += 1
+
+			if right >= wrong:
+				preds.append(1)
+			else:
+				preds.append(0)
+
+
 		return preds
+
+
 
 	def _predict(self, example):
 		node = self.root
