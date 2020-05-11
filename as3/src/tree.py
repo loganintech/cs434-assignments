@@ -300,16 +300,6 @@ class RandomForestClassifier():
 		return preds
 
 
-
-	def _predict(self, example):
-		node = self.root
-		while node.left_tree:
-			if example[node.feature] < node.split:
-				node = node.left_tree
-			else:
-				node = node.right_tree
-		return node.prediction
-
 ################################################
 # YOUR CODE GOES IN ADABOOSTCLASSIFIER         #
 # MUST MODIFY THIS EXISTING DECISION TREE CODE #
