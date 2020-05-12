@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import functools
+from copy import deepcopy
 
 
 class Node():
@@ -245,11 +246,11 @@ class RandomForestClassifier():
             x.root = x.build_tree(
                 bagged_X[i], bagged_y[i], depth=1, features=self.max_features)
             self.forest.append(x)
-            #preds_train = x.predict(bagged_X[i])
+            # preds_train = x.predict(bagged_X[i])
 
-            #train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
+            # train_accuracy = x.accuracy_score([preds_train], bagged_y[i])
 
-            #print('Train {} {}'.format(i, train_accuracy))
+            # print('Train {} {}'.format(i, train_accuracy))
 
             ##################
         print('Trees have been built!')
@@ -276,7 +277,7 @@ class RandomForestClassifier():
     def predict(self, X):
 
         # remove this one \/
-        #preds = np.ones(len(X)).astype(int)
+        # preds = np.ones(len(X)).astype(int)
         # ^that line is only here so the code runs
 
         ##################
@@ -318,28 +319,30 @@ class AdaBoostClassifier():
         self.trees = trees
 
     def fit(self, x_train, y_train):
-        y_train[y_train == 0] = -1
         self.x_train = x_train
         self.y_train = y_train
         self.ada_boost(x_train, y_train)
 
     def calculate_alpha(self, e_t):
         term = (1 - e_t) / e_t
+        if term <= 0:
+            term = np.e
         alpha = (1/2) * np.log(term)
         return alpha
 
     def ada_boost(self, X, y):
         self.errors = [0] * self.trees
-        self.alphas = [0] * (self.trees + 1)
-        self.weights = [[0]] * (self.trees + 1)
+        self.alphas = [0.0] * (self.trees + 1)
+        self.weights = []
+        for i in range(self.trees + 1):
+            self.weights.append([0] * X.shape[0])
         self.classifiers = [0] * self.trees
         for t in range(self.trees):
             if t == 0:
                 self.weights[0] = [1 / (X.shape[0])] * X.shape[0]
-                self.alphas[0] = 0
 
             self.classifiers[t] = DecisionTreeAda(
-                max_depth=1, weights=self.weights[t], alpha=self.alphas[t])
+                max_depth=1, weights=deepcopy(self.weights[t]), alpha=self.alphas[t])
             self.classifiers[t].fit(X, y)
             # calculate error
             self.errors[t] = self.classifiers[t].get_weighted_error(X, y)
@@ -347,14 +350,12 @@ class AdaBoostClassifier():
             # calculate alpha
             self.alphas[t+1] = self.calculate_alpha(self.errors[t])
             # print(f"Alpha[{t}]: {self.alphas[t]}")
-            self.weights[t+1] = self.classifiers[t].get_modified_weights(
-                X, y, self.alphas[t])
+            self.weights[t+1] = self.classifiers[t].get_modified_weights(X, y)
 
     def predict(self, X):
-
         pred = 0
         predictions = []
-        for i in range(self.trees):
+        for i in range(len(self.classifiers)):
             thispred = self.classifiers[i].predict(X)
             thispred = np.multiply(thispred, self.alphas[i])
             predictions.append(thispred)
@@ -365,7 +366,7 @@ class AdaBoostClassifier():
                 prediction[i] += preds[i]
 
         for i in range(len(prediction)):
-            prediction[i] = 0 if prediction[i] < 0 else 1
+            prediction[i] = -1 if prediction[i] < 0 else 1
 
         return prediction
 
@@ -506,45 +507,60 @@ class DecisionTreeAda():
 
         if len(left_y) > 0 and len(right_y) > 0:
 
-            c_plus = 0
-            c_minus = 0
-            cl_plus = 0
-            cl_minus = 0
-            cr_plus = 0
-            cr_minus = 0
-            pl = 0
-            pr = 0
+            total_positive_count = 0
+            total_negative_count = 0
+            left_positive_count = 0
+            left_negative_count = 0
+            right_positive_count = 0
+            right_negative_count = 0
 
             for i in range(0, len(y)):
                 if y[i] == 1:
-                    c_plus += 1
+                    total_positive_count += 1  # * self.weights[i]
                 else:
-                    c_minus += 1
-            t1 = (c_plus / (c_plus + c_minus))
-            t2 = (c_minus / (c_plus + c_minus))
-            u_y = 1 - (t1 ** 2) - (t2 ** 2)
+                    total_negative_count += 1  # * self.weights[i]
+
+            positive_probability = (
+                total_positive_count / (total_positive_count + total_negative_count))
+            negative_probability = (total_negative_count /
+                                    (total_positive_count + total_negative_count))
+            u_y = 1 - (positive_probability ** 2) - (negative_probability ** 2)
 
             for j in range(0, len(left_y)):
                 if left_y[j] == 1:
-                    cl_plus += 1
+                    left_positive_count += 1  # * self.weights[j]
                 else:
-                    cl_minus += 1
-            t1 = (cl_plus / (cl_plus + cl_minus))
-            t2 = (cl_minus / (cl_plus + cl_minus))
-            u_left_y = 1 - (t1 ** 2) - (t2 ** 2)
+                    left_negative_count += 1  # * self.weights[j]
+
+            probability_positive_left = (left_positive_count /
+                                         (left_positive_count + left_negative_count))
+            probability_negative_right = (left_negative_count /
+                                          (left_positive_count + left_negative_count))
+            u_left_y = 1 - (probability_positive_left ** 2) - \
+                (probability_negative_right ** 2)
 
             for k in range(0, len(right_y)):
                 if right_y[k] == 1:
-                    cr_plus += 1
+                    # * self.weights[k + len(left_y)]
+                    right_positive_count += 1
                 else:
-                    cr_minus += 1
-            t1 = (cr_plus / (cr_plus + cr_minus))
-            t2 = (cr_minus / (cr_plus + cr_minus))
-            u_right_y = 1 - (t1 ** 2) - (t2 ** 2)
+                    # * self.weights[k + len(left_y)]
+                    right_negative_count += 1
 
-            pl = (cl_plus + cl_minus) / (c_plus + c_minus)
-            pr = (cr_plus + cr_minus) / (c_plus + c_minus)
-            gain = u_y - (pl * u_left_y) - (pr * u_right_y)
+            probability_positive_right = (right_positive_count /
+                                          (right_positive_count + right_negative_count))
+            probability_negative_right = (right_negative_count /
+                                          (right_positive_count + right_negative_count))
+            u_right_y = 1 - (probability_positive_right ** 2) - \
+                (probability_negative_right ** 2)
+
+            probability_left = (left_positive_count + left_negative_count) / \
+                (total_positive_count + total_negative_count)
+            probability_right = (right_positive_count + right_negative_count) / \
+                (total_positive_count + total_negative_count)
+
+            gain = u_y - (probability_left * u_left_y) - \
+                (probability_right * u_right_y)
             return gain
         # we hit leaf node
         # don't have any gain, and don't want to divide by 0
@@ -553,18 +569,20 @@ class DecisionTreeAda():
 
     def get_weighted_error(self, X, y):
         preds = self.predict(X)
-        weight = 0.0001
+        weight = 0.01
         for i in range(len(preds)):
             if preds[i] != y[i]:
+                # print(preds[i], y[i])
                 weight += self.weights[i]
-        return weight
+        return weight / len(self.weights)
 
-    def get_modified_weights(self, X, y, alpha):
+    def get_modified_weights(self, X, y):
         preds = self.predict(X)
-        weights = self.weights
+        weights = deepcopy(self.weights)
         for i in range(len(weights)):
             if preds[i] == y[i]:
-                weights[i] = weights[i] * (np.e ** -alpha)
+                weights[i] *= (np.e ** (-self.alpha * preds[i]))
             else:
-                weights[i] = weights[i] * (np.e ** alpha)
+                weights[i] *= (np.e ** (self.alpha * preds[i]))
+        weights = np.divide(weights, len(weights))
         return weights

@@ -41,22 +41,37 @@ def decision_tree_testing(x_train, y_train, x_test, y_test):
 
 
 def random_forest_testing(x_train, y_train, x_test, y_test):
-    print('Random Forest\n\n')
-    rclf = RandomForestClassifier(max_depth=7, max_features=11, n_trees=10)
-    rclf.fit(x_train, y_train)
-    preds_train = rclf.predict(x_train)
-    preds_test = rclf.predict(x_test)
-    train_accuracy = accuracy_score(preds_train, y_train)
-    test_accuracy = accuracy_score(preds_test, y_test)
-    print('Train {}'.format(train_accuracy))
-    print('Test {}'.format(test_accuracy))
-    preds = rclf.predict(x_test)
-    print('F1 Test {}'.format(f1(y_test, preds)))
+    accuracies = []
+    for feat_count in range(11, 12):
+        for trees in range(10, 200, 10):
+            print(
+                f'Random Forest w/ {trees} Trees and {feat_count} features\n\n')
+            rclf = RandomForestClassifier(
+                max_depth=7, max_features=11, n_trees=trees)
+            rclf.fit(x_train, y_train)
+            preds_train = rclf.predict(x_train)
+            preds_test = rclf.predict(x_test)
+            train_accuracy = accuracy_score(preds_train, y_train)
+            test_accuracy = accuracy_score(preds_test, y_test)
+            print('Train {}'.format(train_accuracy))
+            print('Test {}'.format(test_accuracy))
+            preds = rclf.predict(x_test)
+            f1_test = f1(y_test, preds)
+            f1_train = f1(y_train, preds_train)
+            print('F1 Test {}'.format(f1_test))
+            accuracies.append({"test": test_accuracy, "train": train_accuracy,
+                               "f1test": f1_test, "f1train": f1_train, "trees": trees, "features": feat_count})
+
+    return accuracies
 
 
 def ada_boost_testing(x_train, y_train, x_test, y_test, trees):
-    print('AdaBoost\n\n')
+    print("=" * 20)
+    print(f"Testing AdaBoost with {trees} trees")
     ada = AdaBoostClassifier(trees=trees)
+
+    y_train[y_train == 0] = -1
+    y_test[y_test == 0] = -1
 
     ada.fit(x_train, y_train)
     preds_train = ada.predict(x_train)
@@ -66,8 +81,8 @@ def ada_boost_testing(x_train, y_train, x_test, y_test, trees):
 
     print('Train {}'.format(train_accuracy))
     print('Test {}'.format(test_accuracy))
-    preds = ada.predict(x_test)
-    print('F1 Test {}'.format(f1(y_test, preds)))
+    print('F1 Test {}'.format(f1(y_test, preds_test)))
+    print("=" * 20)
 
 
 def create_trees(x_train, y_train, x_test, y_test):
@@ -92,9 +107,14 @@ def create_trees(x_train, y_train, x_test, y_test):
     return y, train, test
 
 
-###################################################
-# Modify for running your experiments accordingly #
-###################################################
+def plot_random_forest(data):
+    for entry in data:
+        print(entry)
+
+
+    ###################################################
+    # Modify for running your experiments accordingly #
+    ###################################################
 if __name__ == '__main__':
     args = load_args()
     x_train, y_train, x_test, y_test = load_data(args.root_dir)
@@ -103,10 +123,10 @@ if __name__ == '__main__':
     if args.decision_tree == 1:
         decision_tree_testing(x_train, y_train, x_test, y_test)
     if args.random_forest == 1:
-        random_forest_testing(x_train, y_train, x_test, y_test)
+        results = random_forest_testing(x_train, y_train, x_test, y_test)
+        plot_random_forest(results)
     if args.ada_boost == 1:
-        for i in range(30, 200, 10):
-            print(f"Testing AdaBoost with {i} trees")
+        for i in range(10, 200, 10):
             ada_boost_testing(x_train, y_train, x_test, y_test, i)
 
     print('Done')
