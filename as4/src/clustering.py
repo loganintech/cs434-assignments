@@ -1,4 +1,5 @@
 import numpy as np
+from random import randint
 
 
 class KMeans():
@@ -24,11 +25,16 @@ class KMeans():
         """
 
         self.centers = np.zeros((self.k, x.shape[1]))
+        self.center_indices = np.zeros((self.k,), dtype=int)
 
         ################################
         #      YOUR CODE GOES HERE     #
         ################################
-
+        for i in range(self.k):
+            temp = randint(0, x.shape[0])
+            self.center_indices[i] = temp
+            self.centers[i] = x[temp] 
+            
     def revise_centers(self, x, labels):
         """
         it updates the centers based on the labels
@@ -51,22 +57,33 @@ class KMeans():
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
+        for i in range(x.shape[0]):
+            print("NUMBER ", i)
+            curr_sse, curr_idx = self.get_sse(x[i], labels)
+            labels[i] = curr_idx
+
         return labels
 
-    def get_sse(self, x, labels):
+    def get_sse(self, x_i, labels):
         """
         for a given input x and its cluster labels, it computes the sse with respect to self.centers
         :param x:  input of (n, m)
         :param labels: label of (n,)
         :return: float scalar of sse
         """
-
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
-
         sse = 0.
-        return sse
+        lowest = 1000.
+        
+        for i in range(0, len(self.centers)):
+            sse = np.linalg.norm(self.centers[i] - x_i) #calculate sse for x_i
+            print("SSE ", sse)
+            if sse < lowest:
+                lowest = sse
+                lowest_idx = i
+        return lowest, lowest_idx
 
     def get_purity(self, x, y):
         """
@@ -80,6 +97,10 @@ class KMeans():
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
+        for i in range(len(labels)):
+            if y[self.center_indices[labels[i]]] == y[i]:
+                purity+=1
+        purity /= x.shape[0]
         return purity
 
     def fit(self, x):
