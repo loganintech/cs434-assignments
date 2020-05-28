@@ -25,15 +25,14 @@ class KMeans():
         """
 
         self.centers = np.zeros((self.k, x.shape[1]))
-        self.center_indices = np.zeros((self.k,), dtype=int)
 
         ################################
         #      YOUR CODE GOES HERE     #
         ################################
-        for i in range(self.k):
-            temp = randint(0, x.shape[0])
-            self.center_indices[i] = temp
-            self.centers[i] = x[temp] 
+        for i in range(self.k): #Loop through the number of clusters
+            temp = randint(0, x.shape[0])   #Create a random number (index) from 0 to 7352   
+            self.centers[i] = x[temp]       #The ith center becomes the "temp" example
+            #self.centers will now contain k number of 'rows' from X.
             
     def revise_centers(self, x, labels):
         """
@@ -53,19 +52,21 @@ class KMeans():
         :param x: input of (n, m)
         :return: labels of (n,). Each labels[i] is the cluster index for sample x[i]
         """
-        labels = np.zeros((x.shape[0]), dtype=int)
+        labels = np.zeros((x.shape[0]), dtype=int) #this contains 7352 0's - one for each example.
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
+        lowest = np.inf
         for i in range(x.shape[0]):
-           # print("NUMBER ", i)
-            curr_sse, curr_idx = self.get_sse(x[i], labels)
-            labels[i] = curr_idx
-        #for idx, example in enumerate(x):
-        #    labels[idx] = self.get_sse(example, labels)
+            for j in range(self.k):
+                 e = np.linalg.norm(self.centers[j] - x[i])
+                 if e < lowest:
+                    lowest = e
+                    labels[i] = j
+            lowest = np.inf
         return labels
 
-    def get_sse(self, x_i, labels):
+    def get_sse(self, x, labels):
         """
         for a given input x and its cluster labels, it computes the sse with respect to self.centers
         :param x:  input of (n, m)
@@ -75,21 +76,11 @@ class KMeans():
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
-        lowest = np.inf
-        
-        for i in range(0, len(self.centers)):
-            sse = np.linalg.norm(self.centers[i] - x_i) #calculate sse for x_i
-           # print("SSE ", sse)
-            if sse < lowest:
-                lowest = sse
-                lowest_idx = i
-        return lowest, lowest_idx
-        '''for idx, center in enumerate(self.centers):
-            sse = np.linalg.norm(center - x_i)
-            if sse < lowest:
-                lowest = sse
-                lowest_idx = idx
-        return lowest, lowest_idx'''
+        sse = 0.
+        for i in range(x.shape[0]):
+            error_i = np.linalg.norm(self.centers[labels[i]] - x[i])
+            sse += error_i
+        return sse
 
     def get_purity(self, x, y):
         """
