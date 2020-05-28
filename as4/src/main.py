@@ -25,7 +25,7 @@ def load_args():
     parser.add_argument('--pca_retain_ratio', default=.9, type=float)
     parser.add_argument('--kmeans_max_k', default=15, type=int)
     parser.add_argument('--kmeans_max_iter', default=20, type=int)
-    parser.add_argument('--root_dir', default='../data/', type=str)
+    parser.add_argument('--root_dir', default='./data/', type=str)
     args = parser.parse_args()
 
     return args
@@ -95,16 +95,16 @@ def apply_kmeans(do_pca, x_train, y_train, kmeans_max_iter, kmeans_max_k):
     #run it five times, then compute the average of sses_vs_iter, then plot.
     #for i in range(5):
     #for k in range(1, kmeans_max_k):
-    for k in range(1, 6):
+    for k in range(1, kmeans_max_k):
         kmeans = KMeans(k, kmeans_max_iter)
         sse_vs_iter = kmeans.fit(x_train)
         train_sses_vs_iter.append(sse_vs_iter)
         train_purities_vs_k.append(kmeans.get_purity(x_train, y_train))
         train_sses_vs_k.append(min(sse_vs_iter))
         s = 0.
-        for t in len(train_sses_vs_iter):
-            s += train_sses_vs_iter[t]
-        avg = (s / len(train_sses_vs_iter))
+        #for t in len(train_sses_vs_iter):
+        #    s += train_sses_vs_iter[t]
+        #avg = (s / len(train_sses_vs_iter))
 
     plot_y_vs_x_list(train_sses_vs_iter, x_label='iter', y_label='sse',
                      save_path='plot_sse_vs_k_subplots_%d'%do_pca)
