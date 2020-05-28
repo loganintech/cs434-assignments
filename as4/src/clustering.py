@@ -58,10 +58,11 @@ class KMeans():
         #      YOUR CODE GOES HERE       #
         ##################################
         for i in range(x.shape[0]):
-            print("NUMBER ", i)
+           # print("NUMBER ", i)
             curr_sse, curr_idx = self.get_sse(x[i], labels)
             labels[i] = curr_idx
-
+        #for idx, example in enumerate(x):
+        #    labels[idx] = self.get_sse(example, labels)
         return labels
 
     def get_sse(self, x_i, labels):
@@ -74,16 +75,21 @@ class KMeans():
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
-        sse = 0.
-        lowest = 1000.
+        lowest = np.inf
         
         for i in range(0, len(self.centers)):
             sse = np.linalg.norm(self.centers[i] - x_i) #calculate sse for x_i
-            print("SSE ", sse)
+           # print("SSE ", sse)
             if sse < lowest:
                 lowest = sse
                 lowest_idx = i
         return lowest, lowest_idx
+        '''for idx, center in enumerate(self.centers):
+            sse = np.linalg.norm(center - x_i)
+            if sse < lowest:
+                lowest = sse
+                lowest_idx = idx
+        return lowest, lowest_idx'''
 
     def get_purity(self, x, y):
         """
@@ -97,11 +103,17 @@ class KMeans():
         ##################################
         #      YOUR CODE GOES HERE       #
         ##################################
-        for i in range(len(labels)):
-            if y[self.center_indices[labels[i]]] == y[i]:
-                purity+=1
-        purity /= x.shape[0]
-        return purity
+        
+        for i in range(self.k):
+            points_in_cluster = []
+            for j in range(len(labels)):
+                if labels[j] == i:
+                    points_in_cluster.append(y[j])
+            temp = np.bincount(points_in_cluster)
+            purity += max(temp)
+
+        return (purity / x.shape[0])
+
 
     def fit(self, x):
         """
