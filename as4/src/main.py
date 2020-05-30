@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import seaborn as sns
 import os
 from matplotlib.ticker import MaxNLocator
@@ -23,7 +24,7 @@ def load_args():
                         help='set to 1 if we desire running kmeans, otherwise 0')
 
     parser.add_argument('--pca_retain_ratio', default=.9, type=float)
-    parser.add_argument('--kmeans_max_k', default=15, type=int)
+    parser.add_argument('--kmeans_max_k', default=10, type=int) #default was originally 15
     parser.add_argument('--kmeans_max_iter', default=20, type=int)
     parser.add_argument('--root_dir', default='./data/', type=str)
     args = parser.parse_args()
@@ -77,10 +78,29 @@ def plot_y_vs_x(ys_vs_x, x_label, y_label, save_path):
 
 
 def visualize(x_train, y_train):
-    pass
+    #pass
     ##################################
     #      YOUR CODE GOES HERE       #
-    ##################################
+    ##################################        
+    c1 = []
+    for i in range(y_train.shape[0]):
+        if (y_train[i] == 0):
+            c1.append(0)
+        elif (y_train[i] == 1):
+            c1.append(1)
+        elif (y_train[i] == 2):
+            c1.append(2)
+        elif (y_train[i] == 3):
+            c1.append(3)
+        elif (y_train[i] == 4):
+            c1.append(4)
+        elif (y_train[i] == 5):
+            c1.append(5)
+        elif (y_train[i] == 6):
+            c1.append(6)    
+    
+    plt.scatter(x_train[:,0], x_train[:,1], c=c1, marker="o", picker=True)
+    plt.show()
 
 
 def apply_kmeans(do_pca, x_train, y_train, kmeans_max_iter, kmeans_max_k):
@@ -93,18 +113,27 @@ def apply_kmeans(do_pca, x_train, y_train, kmeans_max_iter, kmeans_max_k):
     #      YOUR CODE GOES HERE       #
     ##################################
     #run it five times, then compute the average of sses_vs_iter, then plot.
-    #for i in range(5):
-    #for k in range(1, kmeans_max_k):
     for k in range(1, kmeans_max_k):
-        kmeans = KMeans(k, kmeans_max_iter)
-        sse_vs_iter = kmeans.fit(x_train)
-        train_sses_vs_iter.append(sse_vs_iter)
-        train_purities_vs_k.append(kmeans.get_purity(x_train, y_train))
-        train_sses_vs_k.append(min(sse_vs_iter))
-        s = 0.
-        #for t in len(train_sses_vs_iter):
-        #    s += train_sses_vs_iter[t]
-        #avg = (s / len(train_sses_vs_iter))
+        t = []
+        for i in range(5):
+            kmeans = KMeans(k, kmeans_max_iter)
+            sse_vs_iter = kmeans.fit(x_train)
+            t.append(sse_vs_iter)
+            #train_sses_vs_iter.append(sse_vs_iter)
+            train_purities_vs_k.append(kmeans.get_purity(x_train, y_train))
+            train_sses_vs_k.append(min(sse_vs_iter))
+        avg_list = np.average(t, axis=0)
+        train_sses_vs_iter.append(avg_list)
+
+    x_axis = list(range(20))
+    #plt.plot(train_sses_vs_iter[6])
+    #plt.savefig("AVERAGE_sse_vs_iter_k=6")
+    #plt.show()
+
+    for i in range(len(train_sses_vs_iter))):
+        plt.plot(train_sses_vs_iter[i])
+        plt.show()
+        
 
     plot_y_vs_x_list(train_sses_vs_iter, x_label='iter', y_label='sse',
                      save_path='plot_sse_vs_k_subplots_%d'%do_pca)
@@ -124,7 +153,7 @@ if __name__ == '__main__':
         pca = PCA(args.pca_retain_ratio)
         pca.fit(x_train)
         x_train = pca.transform(x_train)
-        x_test = pca.transform(x_test)
+       # x_test = pca.transform(x_test)
         visualize(x_train, y_train)
 
     if args.kmeans == 1:
