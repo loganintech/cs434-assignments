@@ -66,6 +66,20 @@ class PCA():
         ########################################
         #       YOUR CODE GOES HERE            #
         ########################################
+        #Compute the covariance of the matrix
+        covariance = self.cov(x)
+        #Compute the eigenvectors and eigenvalues of c
+        self.eig_vals, self.eig_vecs = self.eig(covariance)
+        #New representation:
+        rep = []
+        for i in range(x.shape[0]):
+            temp = []
+            for j in range(len(self.eig_vecs)):
+                y = np.dot(self.eig_vecs[j].T, x[i])
+                temp.append(y)
+            rep.append(temp)
+        return rep
+        
 
 
     def transform(self, x):
