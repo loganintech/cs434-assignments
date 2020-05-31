@@ -18,13 +18,13 @@ from clustering import KMeans
 
 def load_args():
     parser = argparse.ArgumentParser(description='arguments')
-    parser.add_argument('--pca', default=0, type=int,
+    parser.add_argument('--pca', default=1, type=int,
                         help='set to 1 if we desire running pca, otherwise 0')
     parser.add_argument('--kmeans', default=1, type=int,
                         help='set to 1 if we desire running kmeans, otherwise 0')
 
     parser.add_argument('--pca_retain_ratio', default=.9, type=float)
-    parser.add_argument('--kmeans_max_k', default=10, type=int) #default was originally 15
+    parser.add_argument('--kmeans_max_k', default=15, type=int) #default was originally 15
     parser.add_argument('--kmeans_max_iter', default=20, type=int)
     parser.add_argument('--root_dir', default='./data/', type=str)
     args = parser.parse_args()
@@ -130,7 +130,7 @@ def apply_kmeans(do_pca, x_train, y_train, kmeans_max_iter, kmeans_max_k):
     #plt.savefig("AVERAGE_sse_vs_iter_k=6")
     #plt.show()
 
-    for i in range(len(train_sses_vs_iter))):
+    for i in range(len(train_sses_vs_iter)):
         plt.plot(train_sses_vs_iter[i])
         plt.show()
         
