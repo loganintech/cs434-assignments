@@ -33,7 +33,7 @@ def clean_text(text):
     # remove HTML tags
     text = re.sub(r'<.*?>', '', text)
 
-    # remove the characters [\], ['] and ["]
+    # remove the characters [\], ['] and ["]a
     text = re.sub(r"\\", "", text)
     text = re.sub(r"\'", "", text)
     text = re.sub(r"\"", "", text)
