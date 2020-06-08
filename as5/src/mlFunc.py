@@ -1,3 +1,4 @@
+
 with open('./data/train.csv', "r", encoding="utf-8") as f:
 
     lines = f.readlines()
