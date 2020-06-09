@@ -6,6 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.model_selection import GridSearchCV
 from joblib import dump, load
+import random
 
 train = pd.read_csv("./data/train.csv", skiprows=1)
 train_ids = train.iloc[:, 0].values.astype("U")
@@ -72,7 +73,7 @@ def randomly_extract_possible_phrases_from_sentence(sentence) -> list:
     options = []
     for _ in range(20):
         option = []
-        for _ in range(5):
+        for _ in range(min(5, word_count)):
             choice = random.choice(words)
             while choice in option:
                 choice = random.choice(words)
