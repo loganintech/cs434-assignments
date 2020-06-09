@@ -5,7 +5,6 @@ from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.model_selection import GridSearchCV
-import random
 from joblib import dump, load
 
 train = pd.read_csv("./data/train.csv", skiprows=1)
@@ -22,7 +21,7 @@ print("Building Pipeline")
 pipe = Pipeline([
     ('vect', CountVectorizer(max_df=0.8)),
     ('tfidf', TfidfTransformer(use_idf=True)),
-    ('svc', SVC(C=1.2, kernel="rbf", probability=True))
+    ('svc', SVC(C=1.2, kernel="rbf"))
 ])
 
 
