@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import random
 sns.set()
-
+import csv
+import re
 import argparse
 
 from utils import load_data, f1, accuracy_score, load_dictionary, dictionary_info
 from tree import DecisionTreeClassifier, RandomForestClassifier
+
 
 def load_args():
 
@@ -16,7 +18,6 @@ def load_args():
 	parser.add_argument('--county_dict', default=1, type=int)
 	parser.add_argument('--decision_tree', default=1, type=int)
 	parser.add_argument('--random_forest', default=1, type=int)
-	parser.add_argument('--ada_boost', default=1, type=int)
 	parser.add_argument('--root_dir', default='../data/', type=str)
 	args = parser.parse_args()
 
@@ -74,18 +75,87 @@ def create_trees(x_train, y_train, x_test, y_test):
 		print('F1 Test {}'.format(f1(y_test, preds)))
 	return y, train, test
 
+
+def clean_text(text):
+
+    # remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+
+    # remove the characters [\], ['] and ["]
+    text = re.sub(r"\\", "", text)
+    text = re.sub(r"\'", "", text)
+    text = re.sub(r"\"", "", text)
+    # pattern = r'[^a-zA-z0-9\s]'
+    # text = re.sub(pattern, '', text)
+
+    # convert text to lowercase
+    text = text.strip().lower()
+
+    # replace punctuation characters with spaces
+    filters = '!"\'#$%&()+,-./:;<=>?@[\\]^_`{|}~\t\n'
+    translate_dict = dict((c, "") for c in filters)
+    translate_map = str.maketrans(translate_dict)
+    text = text.translate(translate_map)
+
+    return text.split()
+
+
+def word_classify(text, imptext, mood, baseW, impW):
+	word_list = []
+	i = 0
+	for comment in text:
+		for word in comment:
+			flag = 1
+			for elem in word_list:
+				if elem[0] == word:
+					if mood[i] == "positive":
+						elem[1] += baseW
+					elif mood[i] == "neutral":
+						elem[2] += baseW
+					elif mood[i] == "negative":
+						elem[3] += baseW
+					flag = 0
+					break
+			if flag:
+				if mood[i] == "positive":
+					word_list.append([word,1,0,0])
+				elif mood[i] == "neutral":
+					word_list.append([word,0,1,0])
+				elif mood[i] == "negative":
+					word_list.append([word,0,0,1])
+				else:
+					print(">>>ONE MOOD IS NOT REGISTERED<<<")
+		i += 1
+	i = 0
+	for comment in imptext:
+		for word in comment:
+			for elem in word_list:
+				if elem[0] == word:
+					if mood[i] == "positive":
+						elem[1] += impW
+					elif mood[i] == "neutral":
+						elem[2] += impW
+					elif mood[i] == "negative":
+						elem[3] += impW
+					break
+		i += 1
+
+	return word_list
+
+
 ###################################################
 # Modify for running your experiments accordingly #
 ###################################################
 if __name__ == '__main__':
+	'''
 	args = load_args()
 	x_train, y_train, x_test, y_test = load_data(args.root_dir)
 	#if args.county_dict == 1:
 		#county_info(args)
 	#if args.decision_tree == 1:
 		#decision_tree_testing(x_train, y_train, x_test, y_test)
-	if args.random_forest == 1:
-		random_forest_testing(x_train, y_train, x_test, y_test)
+	#if args.random_forest == 1:
+		#random_forest_testing(x_train, y_train, x_test, y_test)
 
 
 	#####ADDED VARIABLES####
@@ -118,7 +188,6 @@ if __name__ == '__main__':
 			plt.title('accuracy by number of depths')
 			plt.legend()
 			plt.savefig("Q1_E.png")
-
 		if setting == 1:
 			n_tree = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200]
 			for i in n_tree:
@@ -160,7 +229,23 @@ if __name__ == '__main__':
 			plt.legend()
 			plt.savefig("Q2_C.png")
 			plt.show()
+	'''
+	f = csv.reader(open("./data/train.csv"))
+	textID = []
+	text = []
+	textSel = []
+	mood = []
+	for line in f:
+		textID.append(line[0])
+		text.append(clean_text(line[1]))
+		textSel.append(clean_text(line[2]))
+		mood.append(line[3])
 
+	milled = word_classify(text[1:], textSel[1:], mood[1:], 1, 5)
+	print(milled[0])
+	for i in milled:
+		if i[0] == "fun":
+			print(i)
 
 	print('Done')
 	
