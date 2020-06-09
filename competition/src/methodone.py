@@ -7,22 +7,39 @@ from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.model_selection import GridSearchCV
 from joblib import dump, load
 import random
+import re
+import os
 
-train = pd.read_csv("./data/train.csv", skiprows=1)
+# Will be true when running in Kaggle, false otherwise
+use_kaggle_filepaths = os.environ.get("KAGGLE_DATA_PROXY_TOKEN") is not None
+
+if use_kaggle_filepaths:
+    train_filepath = "/kaggle/input/tweet-sentiment-extraction/train.csv"
+    test_filepath = "/kaggle/input/tweet-sentiment-extraction/test.csv"
+    output_filepath = "/kaggle/working/svm_output.csv"
+else:
+    train_filepath = "./data/train.csv"
+    test_filepath = "./data/test.csv"
+    output_filepath = "./data/output.csv"
+
+word_regex = re.compile(r"[\w ]+")
+
+train = pd.read_csv(train_filepath, skiprows=1)
 train_ids = train.iloc[:, 0].values.astype("U")
 train_sentences = train.iloc[:, 1].values.astype("U")
 train_phrases = train.iloc[:, 2].values.astype("U")
 train_sentiments = train.iloc[:, 3].values.astype("U")
 
-test = pd.read_csv("./data/test.csv", skiprows=1)
+test = pd.read_csv(test_filepath, skiprows=1)
+test_ids = test.iloc[:, 0].values.astype("U")
 test_sentences = test.iloc[:, 1].values.astype("U")
 test_sentiments = test.iloc[:, 2].values.astype("U")
 
 print("Building Pipeline")
 pipe = Pipeline([
-    ('vect', CountVectorizer(max_df=0.8)),
-    ('tfidf', TfidfTransformer(use_idf=True)),
-    ('svc', SVC(C=1.2, kernel="rbf"))
+    ('vect', CountVectorizer(max_df=0.8, max_features=10000)),
+    ('tfidf', TfidfTransformer(use_idf=True, sublinear_tf=True)),
+    ('svc', SVC(C=1.2, kernel="rbf", probability=True, cache_size=1000, break_ties=True))
 ])
 
 
@@ -44,14 +61,29 @@ def run_param_checker():
     # vect__ngram_range: (1, 1)
 
     parameters = {
-        'vect__max_df': (0.8, 1.0),
-        'vect__ngram_range': [(1, 1), (1, 2)],
-        'tfidf__use_idf': (True, False),
-        'svc__C': (0.8, 1.2),
-        'svc__kernel': ["linear", "poly", "rbf", "sigmoid"],
+        ##########
+        # Below are the first-run parameters we used for the grid search
+        # IE, the first time we tried optimizing, we used those settings
+        # 'vect__max_df': (0.8, 1.0),
+        # 'vect__ngram_range': [(1, 1), (1, 2)],
+        # 'tfidf__use_idf': (True, False),
+        # 'svc__C': (0.8, 1.2),
+        # 'svc__kernel': ["linear", "poly", "rbf", "sigmoid"],
+        # Second run parameters:
+        # svc__break_ties: True
+        # tfidf__sublinear_tf: True
+        # vect__analyzer: 'word'
+        # vect__lowercase: True
+        # vect__max_features: 10000
+
+        'vect__analyzer': ['word', 'char'],
+        'vect__lowercase': [True, False],
+        'vect__max_features': [100, 1000, 10000, 3000, 5000],
+        'tfidf__sublinear_tf': [True, False],
+        'svc__break_ties': [True, False],
     }
 
-    gs = GridSearchCV(pipe, parameters, cv=5, n_jobs=9)
+    gs = GridSearchCV(pipe, parameters, cv=5, n_jobs=12)
     gs.fit(train_phrases, train_sentiments)
 
     for param_name in sorted(parameters.keys()):
@@ -67,34 +99,92 @@ def combined_fitting(pipe):
     return pipe
 
 
-def randomly_extract_possible_phrases_from_sentence(sentence) -> list:
+def randomly_extract_possible_phrases_from_sentence(sentence, inner_iteration_max=20) -> list:
+    # print(f"Pre Regex: {sentence}")
+    sentence = sentence.replace("'", '')
+    sentence = sentence.replace("`", '')
+    sentence = word_regex.findall(sentence)
+    sentence = list(filter(lambda x: len(x) > 0 and x != " ", sentence))
+    # print(f"Post 0Length Filter: {sentence}")
+    for idx, part in enumerate(sentence):
+        # print(f"Part: {part}")
+        part = part.split(" ")
+        part = list(filter(lambda x: len(x) > 0, part))
+        sentence[idx] = " ".join(part)
+    # print(f"Post Space Removal: {sentence}")
+
+    sentence = list(filter(lambda x: len(x) > 1, sentence))
+    sentence = " ".join([part for part in sentence])
+    # print(sentence)
     words = sentence.split(" ")
-    word_count = len(words)
+
+    word_count = len(set(words))
+    if word_count < 2:
+        return [sentence]
     options = []
-    for _ in range(20):
+    for _ in range(30):
         option = []
-        for _ in range(min(5, word_count)):
+        last_idx = 0
+        for _ in range(min((int(random.random()) * 5) + 3, word_count)):
             choice = random.choice(words)
-            while choice in option:
+            idx = words.index(choice)
+            iters = 0
+            while (choice in option or idx < last_idx) and iters < inner_iteration_max:
                 choice = random.choice(words)
+                iters += 1
+                idx = words.index(choice)
+
             option.append(choice)
         if option not in options:
             options.append(option)
 
-    return [" ".join(option) for option in options]
+    final = []
+    for option in options:
+        if len(option) > 1:
+            final.append(" ".join(option))
+
+    return final
+
+
+def array_idx_from_label(label):
+    return {
+        "negative": 0,
+        "neutral": 1,
+        "positive": 2
+    }[label]
 
 
 if __name__ == "__main__":
+    # run_param_checker()
+
     # simple_fitting(pipe)
     combined = combined_fitting(pipe)
-    dump(combined, 'combined_pipe.joblib')
-    for sentence in test_sentences[:10]:
-        print(sentence)
-        phrases = randomly_extract_possible_phrases_from_sentence(sentence)
-        print(phrases)
-        probs = []
-        for phrase in phrases:
-            probs.append(combined.predict_proba(phrase))
+    dump(combined, "combined_pipe_secondtrained_probability.joblib")
+    # combined = load('combined_pipe_probability.joblib')
+    # combined = load('combined_pipe_retrained.joblib')
+    # dump(combined, 'combined_pipe_retrained.joblib')
+    with open(output_filepath, "w") as f:
+        f.write("textID,selected_text\n")
 
-        idx = probs.index(max(probs))
-        print(phrases[idx])
+        for id_idx, sentence in enumerate(test_sentences):
+            # print(f"Full Sentence: {sentence}")
+            phrases = randomly_extract_possible_phrases_from_sentence(sentence)
+            # print(phrases)
+            sentence_label = combined.predict([sentence])
+            prob_label = combined.predict(phrases)
+            probs = combined.predict_proba(phrases)
+            # for phrase in phrases:
+            # probs.append(combined.predict([phrase]))
+
+            # print(sentence_label)
+            # print(probs)
+            idx = 0
+            highest = 0
+            for i, (prob, label) in enumerate(zip(probs, prob_label)):
+                prob = prob[array_idx_from_label(label)]
+                if prob > highest:
+                    idx = i
+                    highest = prob
+            # print(f"{sentence_label} - {test_ids[idx]}: {phrases[idx]}")
+            f.write(f"{test_ids[id_idx]},{phrases[idx]}\n")
+            f.flush()
