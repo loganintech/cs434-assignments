@@ -5,6 +5,8 @@ from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.model_selection import GridSearchCV
+import random
+from joblib import dump, load
 
 train = pd.read_csv("./data/train.csv", skiprows=1)
 train_ids = train.iloc[:, 0].values.astype("U")
@@ -20,7 +22,7 @@ print("Building Pipeline")
 pipe = Pipeline([
     ('vect', CountVectorizer(max_df=0.8)),
     ('tfidf', TfidfTransformer(use_idf=True)),
-    ('svc', SVC(C=1.2, kernel="rbf"))
+    ('svc', SVC(C=1.2, kernel="rbf", probability=True))
 ])
 
 
@@ -65,6 +67,34 @@ def combined_fitting(pipe):
     return pipe
 
 
+def randomly_extract_possible_phrases_from_sentence(sentence) -> list:
+    words = sentence.split(" ")
+    word_count = len(words)
+    options = []
+    for _ in range(20):
+        option = []
+        for _ in range(5):
+            choice = random.choice(words)
+            while choice in option:
+                choice = random.choice(words)
+            option.append(choice)
+        if option not in options:
+            options.append(option)
+
+    return [" ".join(option) for option in options]
+
+
 if __name__ == "__main__":
     # simple_fitting(pipe)
     combined = combined_fitting(pipe)
+    dump(combined, 'combined_pipe.joblib')
+    for sentence in test_sentences[:10]:
+        print(sentence)
+        phrases = randomly_extract_possible_phrases_from_sentence(sentence)
+        print(phrases)
+        probs = []
+        for phrase in phrases:
+            probs.append(combined.predict_proba(phrase))
+
+        idx = probs.index(max(probs))
+        print(phrases[idx])
