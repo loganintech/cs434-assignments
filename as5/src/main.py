@@ -108,6 +108,7 @@ def word_classify(text, imptext, mood, baseW, impW):
 			flag = 1
 			for elem in word_list:
 				if elem[0] == word:
+					elem[4] += 1
 					if mood[i] == "positive":
 						elem[1] += baseW
 					elif mood[i] == "neutral":
@@ -118,11 +119,11 @@ def word_classify(text, imptext, mood, baseW, impW):
 					break
 			if flag:
 				if mood[i] == "positive":
-					word_list.append([word,1,0,0])
+					word_list.append([word,2,1,1,1])
 				elif mood[i] == "neutral":
-					word_list.append([word,0,1,0])
+					word_list.append([word,1,2,1,1])
 				elif mood[i] == "negative":
-					word_list.append([word,0,0,1])
+					word_list.append([word,1,1,2,1])
 				else:
 					print(">>>ONE MOOD IS NOT REGISTERED<<<")
 		i += 1
@@ -242,10 +243,34 @@ if __name__ == '__main__':
 		mood.append(line[3])
 
 	milled = word_classify(text[1:], textSel[1:], mood[1:], 1, 5)
-	print(milled[0])
+	
+	print(len(milled))
+	best = 0
+	bestPos = 0
+	pos = 0
 	for i in milled:
-		if i[0] == "fun":
+		if i[4] > best:
+			best = i[4]
+			bestPos = pos
+		if i[0] == "what":
 			print(i)
+		if i[0] == "an":
+			print(i)
+		if i[0] == "interview":
+			print(i)
+		if i[0] == "leave":
+			print(i)
+		if i[0] == "me":
+			print(i)
+		if i[0] == "alone":
+			print(i)
+		pos += 1
+	inp = ""
+	while inp != "done!":
+		inp = input("what should i search for?")
+		for i in milled:
+			if i[0] == inp:
+				print(i)
 
 	print('Done')
 	
