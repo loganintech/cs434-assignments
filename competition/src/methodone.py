@@ -14,15 +14,21 @@ import os
 
 # Will be true when running in Kaggle, false otherwise
 use_kaggle_filepaths = os.environ.get("KAGGLE_DATA_PROXY_TOKEN") is not None
+use_svm = False
+load_from_joblib = False
 
 if use_kaggle_filepaths:
     train_filepath = "/kaggle/input/tweet-sentiment-extraction/train.csv"
     test_filepath = "/kaggle/input/tweet-sentiment-extraction/test.csv"
-    output_filepath = "/kaggle/working/svm_output.csv"
+    output_filepath = "/kaggle/working/submission.csv"
+    svm_joblib_filepath = "/kaggle/input/svcprobabiltiytrainedjoblibtweetextraction/v0.0.2p.joblib"
+    neural_joblib_filepath = "/kaggle/input/svcprobabiltiytrainedjoblibtweetextraction/v0.0.2p.joblib"
 else:
     train_filepath = "./data/train.csv"
     test_filepath = "./data/test.csv"
     output_filepath = "./data/output.csv"
+    svm_joblib_filepath = "./svm/v0.0.2p.joblib"
+    neural_joblib_filepath = "./neural/v0.0.0m.joblib"
 
 word_regex = re.compile(r"[\w ]+")
 
@@ -37,11 +43,15 @@ test_ids = test.iloc[:, 0].values.astype("U")
 test_sentences = test.iloc[:, 1].values.astype("U")
 test_sentiments = test.iloc[:, 2].values.astype("U")
 
-pipe = Pipeline([
+svm_pipe = Pipeline([
     ('vect', CountVectorizer(max_df=0.8, max_features=10000)),
     ('tfidf', TfidfTransformer(use_idf=True, sublinear_tf=True)),
-    # ('svc', SVC(C=1.2, kernel="rbf", probability=True, cache_size=1000, break_ties=True))
-    # ('ada', AdaBoostClassifier(learning_rate=0.9, n_estimators=100))
+    ('svc', SVC(C=1.2, kernel="rbf", probability=True,
+                cache_size=1000, break_ties=True))
+])
+neural_pipe = Pipeline([
+    ('vect', CountVectorizer(max_df=0.8, max_features=10000)),
+    ('tfidf', TfidfTransformer(use_idf=True, sublinear_tf=True)),
     ('mlp', MLPClassifier())
 ])
 
@@ -81,10 +91,12 @@ def run_param_checker():
         # Third run parameters
         # 'ada__n_estimators': 100,
         # 'ada__learning_rate': 0.9
-        'mlp__hidden_layer_sizes': [(100,), (80, 100), (100, 80), (200, 200)],
-        'mlp__activation': ["logistic", "tanh", "relu"],
-        'mlp__solver': ["sgd", "adam"],
-        'mlp__alpha': [0.001, 0.0001, 0.00001],
+
+        # Here lies the training set I tried that one time, that took 160 minutes and was cancelled.
+        # 'mlp__hidden_layer_sizes': [(100,), (80, 100), (100, 80), (200, 200)],
+        # 'mlp__activation': ["logistic", "tanh", "relu"],
+        # 'mlp__solver': ["sgd", "adam"],
+        # 'mlp__alpha': [0.001, 0.0001, 0.00001],
     }
 
     gs = GridSearchCV(pipe, parameters, cv=5, n_jobs=12)
@@ -158,7 +170,7 @@ def array_idx_from_label(label):
     }[label]
 
 
-def preidct_from_pipe(pipe):
+def predict_from_pipe(pipe):
     with open(output_filepath, "w") as f:
         f.write("textID,selected_text\n")
 
@@ -166,7 +178,7 @@ def preidct_from_pipe(pipe):
             # print(f"Full Sentence: {sentence}")
             phrases = randomly_extract_possible_phrases_from_sentence(sentence)
             # print(phrases)
-            sentence_label = pipe.predict([sentence])
+            sentence_label = pipe.predict([sentence])[0]
             # prob_label = pipe.predict(phrases)
             probs = pipe.predict_proba(phrases)
             # for phrase in phrases:
@@ -188,9 +200,18 @@ def preidct_from_pipe(pipe):
 
 
 if __name__ == "__main__":
-    run_param_checker()
+    # run_param_checker()
 
     # simple_fitting(pipe)
-    # combined = combined_fitting(pipe)
-    # combined = load('v0.0.2p.joblib')
-    # dump(combined, 'combined_pipe_retrained.joblib')
+    if load_from_joblib:
+        if use_svm:
+            pipe = load(svm_joblib_filepath)
+        else:
+            pipe = load(neural_joblib_filepath)
+    else:
+        if use_svm:
+            pipe = combined_fitting(svm_pipe)
+        else:
+            pipe = combined_fitting(neural_pipe)
+
+    predict_from_pipe(pipe)
