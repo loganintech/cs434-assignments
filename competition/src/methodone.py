@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn import metrics
 from sklearn.svm import SVC
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.model_selection import GridSearchCV
@@ -35,11 +37,12 @@ test_ids = test.iloc[:, 0].values.astype("U")
 test_sentences = test.iloc[:, 1].values.astype("U")
 test_sentiments = test.iloc[:, 2].values.astype("U")
 
-print("Building Pipeline")
 pipe = Pipeline([
     ('vect', CountVectorizer(max_df=0.8, max_features=10000)),
     ('tfidf', TfidfTransformer(use_idf=True, sublinear_tf=True)),
-    ('svc', SVC(C=1.2, kernel="rbf", probability=True, cache_size=1000, break_ties=True))
+    # ('svc', SVC(C=1.2, kernel="rbf", probability=True, cache_size=1000, break_ties=True))
+    # ('ada', AdaBoostClassifier(learning_rate=0.9, n_estimators=100))
+    ('mlp', MLPClassifier())
 ])
 
 
@@ -75,12 +78,13 @@ def run_param_checker():
         # vect__analyzer: 'word'
         # vect__lowercase: True
         # vect__max_features: 10000
-
-        'vect__analyzer': ['word', 'char'],
-        'vect__lowercase': [True, False],
-        'vect__max_features': [100, 1000, 10000, 3000, 5000],
-        'tfidf__sublinear_tf': [True, False],
-        'svc__break_ties': [True, False],
+        # Third run parameters
+        # 'ada__n_estimators': 100,
+        # 'ada__learning_rate': 0.9
+        'mlp__hidden_layer_sizes': [(100,), (80, 100), (100, 80), (200, 200)],
+        'mlp__activation': ["logistic", "tanh", "relu"],
+        'mlp__solver': ["sgd", "adam"],
+        'mlp__alpha': [0.001, 0.0001, 0.00001],
     }
 
     gs = GridSearchCV(pipe, parameters, cv=5, n_jobs=12)
@@ -154,15 +158,7 @@ def array_idx_from_label(label):
     }[label]
 
 
-if __name__ == "__main__":
-    # run_param_checker()
-
-    # simple_fitting(pipe)
-    combined = combined_fitting(pipe)
-    dump(combined, "combined_pipe_secondtrained_probability.joblib")
-    # combined = load('combined_pipe_probability.joblib')
-    # combined = load('combined_pipe_retrained.joblib')
-    # dump(combined, 'combined_pipe_retrained.joblib')
+def preidct_from_pipe(pipe):
     with open(output_filepath, "w") as f:
         f.write("textID,selected_text\n")
 
@@ -170,9 +166,9 @@ if __name__ == "__main__":
             # print(f"Full Sentence: {sentence}")
             phrases = randomly_extract_possible_phrases_from_sentence(sentence)
             # print(phrases)
-            sentence_label = combined.predict([sentence])
-            prob_label = combined.predict(phrases)
-            probs = combined.predict_proba(phrases)
+            sentence_label = pipe.predict([sentence])
+            # prob_label = pipe.predict(phrases)
+            probs = pipe.predict_proba(phrases)
             # for phrase in phrases:
             # probs.append(combined.predict([phrase]))
 
@@ -180,11 +176,21 @@ if __name__ == "__main__":
             # print(probs)
             idx = 0
             highest = 0
-            for i, (prob, label) in enumerate(zip(probs, prob_label)):
-                prob = prob[array_idx_from_label(label)]
+            for i, prob in enumerate(probs):
+                # for i, (prob, label) in enumerate(zip(probs, prob_label)):
+                prob = prob[array_idx_from_label(sentence_label)]
                 if prob > highest:
                     idx = i
                     highest = prob
             # print(f"{sentence_label} - {test_ids[idx]}: {phrases[idx]}")
             f.write(f"{test_ids[id_idx]},{phrases[idx]}\n")
             f.flush()
+
+
+if __name__ == "__main__":
+    run_param_checker()
+
+    # simple_fitting(pipe)
+    # combined = combined_fitting(pipe)
+    # combined = load('v0.0.2p.joblib')
+    # dump(combined, 'combined_pipe_retrained.joblib')
